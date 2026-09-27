@@ -132,6 +132,7 @@ SENTENCES: dict[str, str] = {
     "webhook.create": "{actor} added a webhook to {url}",
     "webhook.delete": "{actor} removed the webhook to {url}",
     "records.issue": "{actor} issued {count} signed records ({kind})",
+    "records.revoke": "{actor} revoked the record for {name} ({reason})",
     "token.create": "{actor} created an API token “{name}”",
     "token.revoke": "{actor} revoked an API token “{name}”",
     "admin.toggle": "{actor} set admin={value} for {email}",

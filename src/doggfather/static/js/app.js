@@ -44,6 +44,9 @@
     });
   });
 
+  // Print buttons (inline handlers are blocked by our CSP).
+  document.querySelectorAll("[data-print]").forEach((el) => el.addEventListener("click", () => window.print()));
+
   // Auto-submit filter controls: <select data-autosubmit>.
   document.querySelectorAll("[data-autosubmit]").forEach((el) => {
     el.addEventListener("change", () => el.form && el.form.requestSubmit());

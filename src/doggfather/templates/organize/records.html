@@ -1,0 +1,66 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Records{% endblock %}
+{% block body %}
+<div class="grid grid--3 mb-3">
+  <form method="post" action="/organize/{{ event.slug }}/records" class="card card--panel">
+    {{ ui.csrf() }}<input type="hidden" name="action" value="judges">
+    <div class="card__head"><h2 class="card__title">Judge records</h2><span class="kicker">after judging closes</span></div>
+    <p class="small muted">One signed record per judge: reviews filed and a SHA-256 commitment to their scores that reveals nothing until the judge chooses to.</p>
+    <button class="btn btn--primary btn--block" type="submit">Issue judge records</button>
+  </form>
+  <form method="post" action="/organize/{{ event.slug }}/records" class="card card--panel">
+    {{ ui.csrf() }}<input type="hidden" name="action" value="certificates">
+    <div class="card__head"><h2 class="card__title">Certificates</h2><span class="kicker">participation + awards</span></div>
+    <p class="small muted">Every member of every submitting team, plus award certificates for prize winners (results must be published).</p>
+    <button class="btn btn--primary btn--block" type="submit">Issue certificates</button>
+  </form>
+  <div class="card">
+    <div class="card__head"><h2 class="card__title">Signing key</h2></div>
+    <p class="small muted">Ed25519. Anyone can verify with the public key, offline.</p>
+    <a class="btn btn--sm" href="/.well-known/doggfather/signing-key.pem">Public key</a> <a class="btn btn--sm" href="/verify">Verify page</a>
+  </div>
+</div>
+
+{{ ui.shead("01", "Prizes") }}
+{% if prizes %}
+<div class="panels mb-3">
+  {% for z in prizes %}
+  <form method="post" action="/organize/{{ event.slug }}/records" class="between">
+    {{ ui.csrf() }}<input type="hidden" name="action" value="award"><input type="hidden" name="prize" value="{{ z.id }}">
+    <div><strong>{{ z.name }}</strong> <span class="small muted">{{ z.track_name or "overall" }}{% if z.value %} · {{ z.value }}{% endif %}</span>{% if z.winner %}<br><span class="small teal">→ {{ z.winner }}</span>{% endif %}</div>
+    <div class="cluster">
+      <select class="select" name="project" aria-label="Winner of {{ z.name }}" style="max-width: 320px">
+        <option value="">no winner</option>
+        {% for r in ranking if not z.track_id or r.track_name == z.track_name %}
+          <option value="{{ r.id }}" {% if r.id == z.project_id %}selected{% endif %}>#{{ r.rank }} {{ r.title }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn--sm" type="submit">Save</button>
+    </div>
+  </form>
+  {% endfor %}
+</div>
+{% else %}{% call ui.empty("No prizes defined", "Add prizes in Settings to award them here.") %}{% endcall %}{% endif %}
+
+{{ ui.shead("02", "Issued") }}
+<div class="table-wrap">
+  <table class="table table--dense">
+    <thead><tr><th>Kind</th><th>For</th><th>Issued</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for rec in records %}
+      <tr>
+        <td class="small">{{ labels[rec.kind] }}</td>
+        <td><a href="/records/{{ rec.id }}">{{ rec.subject_name }}</a> <span class="dim small">{{ rec.id }}</span></td>
+        <td class="small">{{ rec.issued_at|dt }}</td>
+        <td>{% if rec.revoked_at %}{{ ui.status("revoked", "pink") }} <span class="small dim">{{ rec.revoked_reason }}</span>{% else %}{{ ui.status("live", "ok") }}{% endif %}</td>
+        <td class="right">{% if not rec.revoked_at %}
+          <form method="post" action="/organize/{{ event.slug }}/records" class="inline-form" data-confirm="Revoke this record?">
+            {{ ui.csrf() }}<input type="hidden" name="action" value="revoke"><input type="hidden" name="record" value="{{ rec.id }}">
+            <button class="linkish small" type="submit">revoke</button>
+          </form>{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="5" class="muted">Nothing issued yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

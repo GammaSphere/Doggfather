@@ -9,7 +9,7 @@ from .. import audit, auth
 from ..auth import CurrentUser, RequiredUser
 from ..deps import DB, AppSettings, Form, Limiter, client_ip
 from ..errors import ValidationFailed
-from ..services import mailer
+from ..services import mailer, records
 from .templating import redirect, render
 
 router = APIRouter(include_in_schema=False)
@@ -163,6 +163,7 @@ def dashboard(request: Request, db: DB, user: RequiredUser):
     return render(request, "auth/me.html", {
         "memberships": memberships,
         "session_count": auth.session_count(db, user.id),
+        "records": records.records_for_user(db, user),
     })
 
 

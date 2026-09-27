@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Verify a record{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <p class="label-term mb-1">[ VERIFY / ED25519 ]</p>
+    <h1 class="display display--lg">Verify a <span class="accent">record</span></h1>
+    <p class="lead mt-2 mb-3">Certificates and judge records issued by this portal are signed. Paste a record link, its id, or its signed JSON.</p>
+    <form method="post" action="/verify" class="card card--panel form">
+      {{ ui.csrf() }}
+      {{ ui.textarea("record", "Record", query, rows=4, placeholder="rec_… or " ~ base_url ~ "/records/rec_… or {\"payload\": …, \"signature\": …}") }}
+      <div class="form__actions"><button class="btn btn--primary" type="submit">Verify &gt;&gt;&gt;</button><a class="small" href="/.well-known/doggfather/signing-key.pem">Public key (PEM)</a></div>
+    </form>
+    {% if check %}
+      <div class="card mt-3 {% if check.ok %}card--teal{% else %}card--pink{% endif %}">
+        <div class="card__head"><h2 class="card__title">{{ "Genuine" if check.ok else ("Revoked" if check.revoked else "Not verified") }}</h2>
+          {% if check.ok %}{{ ui.status("valid", "ok") }}{% else %}{{ ui.status("invalid" if not check.revoked else "revoked", "pink") }}{% endif %}</div>
+        <p>{{ check.reason }}</p>
+        {% if check.payload %}<pre>{{ check.payload|tojson(indent=2) }}</pre>{% endif %}
+        {% if check.record %}<a class="btn btn--sm" href="/records/{{ check.record.id }}">Open certificate</a>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

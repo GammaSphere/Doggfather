@@ -3993,6 +3993,145 @@
         ]
       }
     },
+    "/api/v1/records/{record_id}": {
+      "get": {
+        "operationId": "api_record_api_v1_records__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A signed record, ready for offline verification",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/api/v1/records/{record_id}/reveal": {
+      "get": {
+        "operationId": "api_reveal_api_v1_records__record_id__reveal_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disclose the scorecards behind a judge record (judge or organizers)",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/api/v1/records/{record_id}/verify": {
+      "get": {
+        "operationId": "api_verify_api_v1_records__record_id__verify_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify a record's signature and revocation status",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/api/v1/signing-key": {
+      "get": {
+        "operationId": "signing_key_api_v1_signing_key_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The platform's public Ed25519 key",
+        "tags": [
+          "records"
+        ]
+      }
+    },
     "/api/v1/teams/join": {
       "post": {
         "operationId": "join_team_api_v1_teams_join_post",

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ labels[r.kind] }} · {{ r.subject_name }}{% endblock %}
+{% block head %}
+<style>
+  .certificate { position: relative; max-width: 880px; margin: 0 auto; padding: clamp(28px, 6vw, 64px); background: #F6F3EA; color: #14161C; border: 1px solid #D8D2C2; box-shadow: 0 0 0 10px #0E1428, 0 0 0 11px var(--line); }
+  .certificate::before { content: ""; position: absolute; inset: 14px; border: 1px solid #C9C1AC; pointer-events: none; }
+  .certificate h1 { margin: 0; font: 400 clamp(2rem, 5vw, 3.4rem)/1 var(--font-display); letter-spacing: -.03em; text-transform: uppercase; color: #14161C; }
+  .certificate .kind { font: 700 11px/1 var(--font-mono); letter-spacing: .3em; text-transform: uppercase; color: #B0224B; }
+  .certificate .name { font: italic 700 clamp(2rem, 5.5vw, 3.6rem)/1.05 var(--font-serif); margin: 26px 0 8px; color: #14161C; }
+  .certificate p { font: 400 15px/1.7 var(--font-serif); color: #33363F; max-width: 60ch; }
+  .certificate .seal { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 34px; padding-top: 16px; border-top: 1px solid #C9C1AC; font: 400 11px/1.6 var(--font-mono); color: #5A5E69; word-break: break-all; }
+  .certificate .seal strong { color: #14161C; }
+</style>
+{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="between mb-2 no-print">
+      <nav class="crumbs"><a href="/verify">Verify</a><span>{{ r.id }}</span></nav>
+      <div class="cluster">
+        {% if check.ok %}{{ ui.status("Signature valid", "ok") }}{% elif check.revoked %}{{ ui.status("Revoked", "pink") }}{% else %}{{ ui.status("Invalid", "pink") }}{% endif %}
+        <a class="btn btn--sm" href="/records/{{ r.id }}.json">Download signed JSON</a>
+        <button class="btn btn--sm btn--primary" type="button" data-print>Print</button>
+      </div>
+    </div>
+    <article class="certificate">
+      <span class="kind">{{ labels[r.kind] }} · {{ p.event.name }}</span>
+      {% if r.kind == "judge_record" %}
+        <h1>Certificate of judging</h1>
+        <div class="name">{{ p.judge.name }}</div>
+        <p>served on the judging panel of <strong>{{ p.event.name }}</strong>{% if p.tracks %} for {{ p.tracks|join(", ") }}{% endif %}, filing {{ p.reviews }} independent review{{ "s" if p.reviews != 1 }}.</p>
+        <p style="font-size:13px">This record commits to the exact scorecards without revealing them: <code style="color:#B0224B">sha256 {{ p.scores_sha256[:24] }}…</code></p>
+      {% elif r.kind == "award" %}
+        <h1>{{ p.prize.name }}</h1>
+        <div class="name">{{ p.person.name }}</div>
+        <p>member of <strong>{{ p.team }}</strong>, awarded {{ p.prize.name }}{% if p.prize.value %} ({{ p.prize.value }}){% endif %} at {{ p.event.name }} for “{{ p.project.title }}”.</p>
+      {% else %}
+        <h1>Certificate of participation</h1>
+        <div class="name">{{ p.person.name }}</div>
+        <p>built and shipped “{{ p.project.title }}” with team <strong>{{ p.team }}</strong> at {{ p.event.name }}.</p>
+      {% endif %}
+      <div class="seal">
+        <span><strong>Issued</strong> {{ p.issued_at|dt }}</span>
+        <span><strong>Record</strong> {{ r.id }}</span>
+        <span><strong>Ed25519 key</strong> {{ r.key_id }}</span>
+        <span><strong>Verify</strong> {{ base_url }}/records/{{ r.id }}</span>
+      </div>
+    </article>
+    <p class="small muted mt-2 no-print">{{ check.reason }} Anyone can check this offline: download the signed JSON and the <a href="/.well-known/doggfather/signing-key.pem">public key</a>, then run <code>python -m doggfather.tools.verify_record record.json signing-key.pem</code>.</p>
+  </div>
+</section>
+{% endblock %}

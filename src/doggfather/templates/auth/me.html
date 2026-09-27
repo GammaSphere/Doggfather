@@ -38,7 +38,19 @@
       {% endcall %}
     {% endif %}
 
-    <div class="mt-4">{{ ui.shead("02", "Account") }}</div>
+    {% if records %}
+    <div class="mt-4">{{ ui.shead("02", "Certificates") }}</div>
+    <div class="grid grid--3">
+      {% for rec in records %}
+      <a class="card" href="/records/{{ rec.id }}">
+        <span class="kicker">{{ rec.kind|replace("_", " ") }}</span>
+        <h3 class="card__title mt-1">{{ rec.event_name }}</h3>
+        <p class="small muted mb-0">Signed {{ rec.issued_at|date }} · verify anywhere</p>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="mt-4">{{ ui.shead("03" if records else "02", "Account") }}</div>
     <div class="grid grid--2">
       <div class="card">
         <div class="card__head"><h2 class="card__title">Sessions</h2>{{ ui.status(session_count ~ " active", "open") }}</div>
