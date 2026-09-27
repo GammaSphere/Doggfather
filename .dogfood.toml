@@ -1,0 +1,24 @@
+# .dogfood.toml: where the DOGFOOD acceptance checker finds things.
+# Run with:  python3 run.py .dogfood.toml > acceptance-report.txt
+
+[portal]
+base_url = "http://localhost:8080"
+
+[tiers]
+claimed = ["T1", "T2"]
+pitch = "Doggfather: an offline, self-hosted hackathon portal with backend-enforced judge isolation and a documented, simulation-tested judge-bias normalization."
+
+[auth]
+# Fixed demo sessions, created at boot only when DOGFOOD_DEMO=1 (the
+# docker compose default). The boot log prints them too.
+organizer   = "Cookie: session=org_7f2a"
+judge_a     = "Cookie: session=jdg_a_91bc"   # jdg_26 Jonas Vogel
+judge_b     = "Cookie: session=jdg_b_44de"   # jdg_24 Diego Herrera, shares 5 projects with judge_a
+participant = "Cookie: session=prt_2e88"     # priya1@example.org, team NorthKiln
+
+[routes]
+gallery      = "/projects"
+submit       = "/projects/new"
+judge_scores = "/api/judge/scores"
+peer_scores  = "/api/judges/jdg_26/scores"
+csv_export   = "/api/events/evt_01/export/results.csv"

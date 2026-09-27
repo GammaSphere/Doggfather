@@ -1,0 +1,16 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Exports{% endblock %}
+{% block body %}
+<p class="lead mb-3">Everything leaves as plain CSV: open it in a spreadsheet, feed it to a script, archive it. Exports are organizer-only and audited.</p>
+<div class="panels">
+  {% for kind, label in kinds.items() %}
+  <div class="between">
+    <div>
+      <h3 class="card__title">{{ kind|capitalize }}</h3>
+      <p class="small muted mb-0">{{ label }} · <code>/api/events/{{ event.id }}/export/{{ kind }}.csv</code></p>
+    </div>
+    <a class="btn btn--teal" href="/api/events/{{ event.id }}/export/{{ kind }}.csv">Download CSV</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

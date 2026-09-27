@@ -1,0 +1,58 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Progress{% endblock %}
+{% block head %}<script src="/static/js/progress.js?v={{ version }}" defer></script>{% endblock %}
+{% block body %}
+<div data-progress="/api/events/{{ event.id }}/progress">
+  <div class="between mb-2">
+    <p class="small muted mb-0">Live: refreshes every 15 seconds · last update <span data-field="generated_at">{{ snap.generated_at|dt }}</span></p>
+    <span class="status status--live">[ LIVE ]</span>
+  </div>
+  <div class="tiles mb-3">
+    <div class="tile"><span class="tile__unit">Unit / Reviews</span><span class="tile__value" data-field="pct">{{ snap.totals.pct }}%</span><span class="tile__label"><span data-field="done">{{ snap.totals.done }}</span> of <span data-field="assigned">{{ snap.totals.assigned }}</span> filed</span></div>
+    <div class="tile"><span class="tile__unit">Unit / Pending</span><span class="tile__value tile__value--teal" data-field="pending">{{ snap.totals.pending }}</span><span class="tile__label">reviews still open</span></div>
+    <div class="tile"><span class="tile__unit">Unit / Delinquent</span><span class="tile__value" data-field="delinquent">{{ snap.totals.delinquent }}</span><span class="tile__label">judges quiet for {{ 24 }}h+ with work left</span></div>
+    <div class="tile"><span class="tile__unit">Unit / Clock</span><span class="tile__value tile__value--teal">{% if snap.judging_open %}{{ snap.hours_left|round|int }}h{% else %}—{% endif %}</span><span class="tile__label">{% if snap.judging_open %}until judging closes{% else %}judging is not open{% endif %}</span></div>
+  </div>
+  {{ ui.progress(snap.totals.done, snap.totals.assigned) }}
+
+  <div class="grid grid--split mt-3">
+    <div>
+      {{ ui.shead("01", "Judges") }}
+      <div class="table-wrap">
+        <table class="table table--dense">
+          <thead><tr><th>Judge</th><th>State</th><th class="num">Done</th><th style="width:28%">Progress</th><th>Last filed</th></tr></thead>
+          <tbody data-judges>
+          {% for j in snap.judges %}
+            <tr>
+              <td><strong>{{ j.name }}</strong>{% if j.abandoned_batches %} <span class="tag tag--warn" title="No review filed in these batches">abandoned {{ j.abandoned_batches|join(", ") }}</span>{% endif %}</td>
+              <td>{% if j.delinquent %}{{ ui.status(j.state, "pink") }}{% elif j.state == "finished" %}{{ ui.status(j.state, "ok") }}{% else %}{{ ui.status(j.state, "open") }}{% endif %}</td>
+              <td class="num">{{ j.done }} / {{ j.assigned }}</td>
+              <td>{{ ui.progress(j.done, j.assigned, "teal") }}</td>
+              <td class="small">{{ j.last_activity|ago if j.last_activity else "never" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <aside class="stack">
+      <section class="card">
+        <div class="card__head"><h2 class="card__title">Tracks</h2></div>
+        {% for t in snap.tracks %}
+          <div class="mb-1">
+            <div class="between small"><span>{{ t.name }}</span><span class="muted">{{ t.done }}/{{ t.assigned }}{% if t.short %} · <span class="pink">{{ t.short }} short</span>{% endif %}</span></div>
+            {{ ui.progress(t.done, t.assigned, "teal") }}
+          </div>
+        {% endfor %}
+      </section>
+      <section class="card">
+        <div class="card__head"><h2 class="card__title">Below target</h2><span class="kicker">{{ snap.totals.projects_below_target }}</span></div>
+        {% if snap.below_target %}
+        <ul class="arrows">{% for b in snap.below_target[:12] %}<li><a href="/projects/{{ b.id }}">{{ b.title }}</a> <span class="dim">{{ b.done }} filed / {{ b.assigned }} assigned</span></li>{% endfor %}</ul>
+        <a class="btn btn--sm mt-1" href="/organize/{{ event.slug }}/assignments">Top up assignments</a>
+        {% else %}<p class="small muted">Every project has {{ event.review_target }}+ filed reviews.</p>{% endif %}
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

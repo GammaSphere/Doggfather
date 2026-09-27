@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from ..auth import CurrentUser, RequiredUser
 from ..deps import DB, AppSettings, Form
 from ..errors import AppError, ValidationFailed
-from ..services import assignment, judges, normalization, results, rubric
+from ..services import assignment, exports, judges, normalization, progress, results, rubric
 from ..services import events as event_service
 from .organizer import organizer_event
 from .templating import redirect, render
@@ -209,3 +209,21 @@ def results_action(request: Request, db: DB, user: RequiredUser, slug: str, form
     except AppError as exc:
         return redirect(request, f"/organize/{slug}/results", exc.message, "error")
     return redirect(request, f"/organize/{slug}/results", message)
+
+
+# ---------------------------------------------------------------- progress
+
+@router.get("/{slug}/progress")
+def progress_page(request: Request, db: DB, user: RequiredUser, slug: str):
+    event = organizer_event(db, user, slug)
+    return render(request, "organize/progress.html", {
+        "event": event, "tab": "progress", "snap": progress.snapshot(db, event),
+    })
+
+
+# ----------------------------------------------------------------- exports
+
+@router.get("/{slug}/exports")
+def exports_page(request: Request, db: DB, user: RequiredUser, slug: str):
+    event = organizer_event(db, user, slug)
+    return render(request, "organize/exports.html", {"event": event, "tab": "exports", "kinds": exports.KINDS})
