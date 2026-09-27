@@ -102,6 +102,24 @@
         "title": "CommentIn",
         "type": "object"
       },
+      "CompareIn": {
+        "properties": {
+          "loser_id": {
+            "title": "Loser Id",
+            "type": "string"
+          },
+          "winner_id": {
+            "title": "Winner Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "winner_id",
+          "loser_id"
+        ],
+        "title": "CompareIn",
+        "type": "object"
+      },
       "CriterionIn": {
         "properties": {
           "delete": {
@@ -2260,6 +2278,46 @@
         ]
       }
     },
+    "/api/v1/events/{event_id}/pairwise": {
+      "get": {
+        "operationId": "pairwise_ranking_api_v1_events__event_id__pairwise_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bradley-Terry ranking from direct comparisons",
+        "tags": [
+          "pairwise"
+        ]
+      }
+    },
     "/api/v1/events/{event_id}/phase": {
       "post": {
         "operationId": "move_phase_api_v1_events__event_id__phase_post",
@@ -3314,6 +3372,96 @@
         "summary": "Remove a webhook",
         "tags": [
           "webhooks"
+        ]
+      }
+    },
+    "/api/v1/judge/pairs": {
+      "post": {
+        "operationId": "post_pair_api_v1_judge_pairs_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "event",
+            "required": true,
+            "schema": {
+              "title": "Event",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record which of two projects is better",
+        "tags": [
+          "pairwise"
+        ]
+      }
+    },
+    "/api/v1/judge/pairs/next": {
+      "get": {
+        "operationId": "next_pair_api_v1_judge_pairs_next_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "event",
+            "required": true,
+            "schema": {
+              "title": "Event",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The next pair to compare (pairwise mode)",
+        "tags": [
+          "pairwise"
         ]
       }
     },

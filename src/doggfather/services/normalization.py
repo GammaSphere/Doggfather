@@ -173,10 +173,14 @@ def implied_comparisons(obs: list[Observation]) -> list[tuple[str, str, float]]:
     return comparisons
 
 
-def within_judge_bt(obs: list[Observation]) -> MethodResult:
-    projects = {o.project for o in obs}
-    comparisons = implied_comparisons(obs)
-    return MethodResult("pairwise", bradley_terry(comparisons, projects), info={"comparisons": len(comparisons)})
+def within_judge_bt(obs: list[Observation], direct: list[tuple[str, str, float]] | None = None) -> MethodResult:
+    """Bradley-Terry over comparisons implied by each judge's scorecards, plus
+    any direct pairwise verdicts judges gave in pairwise mode."""
+    direct = direct or []
+    projects = {o.project for o in obs} | {p for w, l, _ in direct for p in (w, l)}
+    comparisons = implied_comparisons(obs) + direct
+    return MethodResult("pairwise", bradley_terry(comparisons, projects),
+                        info={"comparisons": len(comparisons), "direct": len(direct)})
 
 
 def compute(method: str, obs: list[Observation]) -> MethodResult:

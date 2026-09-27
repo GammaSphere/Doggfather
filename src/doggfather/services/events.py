@@ -49,6 +49,7 @@ class Event:
     voting_open_at: str | None = None
     voting_close_at: str | None = None
     vote_credits: int = 25
+    pairwise_enabled: bool = False
 
     @classmethod
     def from_row(cls, row: sqlite3.Row | dict) -> "Event":
@@ -293,6 +294,7 @@ def clean_event_values(values: dict[str, Any]) -> dict[str, Any]:
         "voting_open_at": voting_open,
         "voting_close_at": voting_close,
         "vote_credits": _int_in(values.get("vote_credits"), 1, 10000, "vote_credits", errors, 25),
+        "pairwise_enabled": 1 if values.get("pairwise_enabled") in (True, 1, "1", "on", "true") else 0,
     }
     if errors:
         raise ValidationFailed(fields=errors)
@@ -330,13 +332,14 @@ def create_event(db: sqlite3.Connection, actor: User, values: dict[str, Any]) ->
 
 EDITABLE = ("name", "slug", "tagline", "description", "submissions_open_at", "submissions_close_at",
             "judging_close_at", "max_team_size", "review_target", "voting_mode", "voting_open_at",
-            "voting_close_at", "vote_credits")
+            "voting_close_at", "vote_credits", "pairwise_enabled")
 
 
 def update_event(db: sqlite3.Connection, actor: User, event: Event, values: dict[str, Any]) -> Event:
     require_organizer(db, actor, event.id)
     clean = clean_event_values(values)
-    changed = [k for k in EDITABLE if str(getattr(event, k)) != str(clean[k])]
+    changed = [k for k in EDITABLE if str(int(getattr(event, k)) if k == "pairwise_enabled" else getattr(event, k))
+               != str(clean[k])]
     if not changed:
         return event
     with transaction(db):

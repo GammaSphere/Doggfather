@@ -9,6 +9,9 @@
   {{ ui.field("judging_close_at", "Judging closes (UTC)", values.judging_close_at|input_dt, type="datetime-local", required=True, errors=errors) }}
   {{ ui.field("max_team_size", "Max team size", values.max_team_size, type="number", errors=errors, attrs='min="1" max="50"') }}
   {{ ui.field("review_target", "Reviews per project", values.review_target, type="number", errors=errors, help="How many judges the auto-assigner aims for.", attrs='min="1" max="20"') }}
+  <div class="field field--full">
+    <label class="check"><input type="checkbox" name="pairwise_enabled" {% if values.pairwise_enabled in (True, 1, "1", "on") %}checked{% endif %}> Pairwise judging mode: judges may also compare projects two at a time (Bradley–Terry ranking)</label>
+  </div>
 </div>
 <div class="divider-label">Community vote</div>
 <div class="form form--2">

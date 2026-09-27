@@ -21,6 +21,7 @@
     </div>
     <p class="small muted">Previewing <strong class="pink">{{ methods[table.method] }}</strong>. ✓ marks the method the published ranking uses. Rank agreement with the raw mean (Spearman ρ):
       {% for m, rho in info.agreement.items() %}<span class="nowrap">{{ methods[m] }} {{ "%.2f"|format(rho) }}</span>{{ " · " if not loop.last }}{% endfor %}.</p>
+    <p class="small muted">Bradley–Terry uses {{ info.pairwise.get("comparisons", 0) }} comparisons{% if info.pairwise.get("direct") %}, {{ info.pairwise.direct }} of them direct pairwise verdicts{% endif %}.</p>
     <p class="small muted mb-0">Why these methods and why the judge-bias model is the default: <a href="/judging">the judging method</a>.</p>
   </div>
   <div class="card card--panel stack">

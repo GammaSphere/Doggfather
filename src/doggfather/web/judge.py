@@ -16,7 +16,7 @@ from ..deps import DB, Form
 from ..errors import ValidationFailed
 from ..services import events as event_service
 from ..services import projects as project_service
-from ..services import rubric, scoring
+from ..services import comparisons, rubric, scoring
 from .templating import redirect, render
 
 router = APIRouter(prefix="/judge", include_in_schema=False)
@@ -49,6 +49,7 @@ def queue_page(request: Request, db: DB, user: RequiredUser, slug: str):
         "next_id": scoring.next_pending(db, user.id, event.id),
         "tracks": [t["name"] for t in event_service.list_tracks(db, event.id)
                    if t["id"] in policy.judge_track_ids(db, user.id, event.id)],
+        "pairwise": comparisons.judge_progress(db, user.id, event) if event.pairwise_enabled else None,
     })
 
 
@@ -104,3 +105,25 @@ def score_submit(request: Request, db: DB, user: RequiredUser, slug: str, projec
     if next_id:
         return redirect(request, f"/judge/{slug}/projects/{project_id}", "Saved.")
     return redirect(request, f"/judge/{slug}", "Saved. That was your last pending project. Thank you!")
+
+
+# ------------------------------------------------------------ pairwise mode
+
+@router.get("/{slug}/compare")
+def compare_page(request: Request, db: DB, user: RequiredUser, slug: str):
+    event = event_service.get_event_by_slug(db, slug)
+    pair = comparisons.next_pair(db, user, event)
+    context = {"event": event, "progress": comparisons.judge_progress(db, user.id, event), "a": None, "b": None,
+               "open": event.judging_open()}
+    if pair:
+        context["a"] = project_service.project_detail(db, pair[0])
+        context["b"] = project_service.project_detail(db, pair[1])
+    return render(request, "judge/compare.html", context)
+
+
+@router.post("/{slug}/compare")
+def compare_submit(request: Request, db: DB, user: RequiredUser, slug: str, form: Form):
+    event = event_service.get_event_by_slug(db, slug)
+    winner, loser = str(form.get("winner") or ""), str(form.get("loser") or "")
+    comparisons.record(db, user, event, winner, loser)
+    return redirect(request, f"/judge/{slug}/compare")

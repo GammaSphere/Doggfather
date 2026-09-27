@@ -21,7 +21,7 @@ from ..auth import CurrentUser, RequiredUser, User
 from ..deps import DB, AppSettings, Limiter, Payload
 from ..errors import Forbidden, NotFound
 from ..services import (
-    assignment, bundles, comments, duplicates, exports, gallery, judges, normalization, progress, projects, results,
+    assignment, bundles, comments, comparisons, duplicates, exports, gallery, judges, normalization, progress, projects, results,
     rubric,
     scoring, teams, tokens, voting, webhooks,
 )
@@ -693,3 +693,28 @@ def import_bundle(db: DB, user: RequiredUser, data: dict[str, Any] = Body(...)):
         raise Forbidden("Only admins and organizers can import events.")
     report = bundles.import_bundle(db, data, actor=user)
     return {"event_id": report.event_id, "counts": report.counts, "warnings": report.warnings}
+
+
+# ---------------------------------------------------------------- pairwise
+
+class CompareIn(BaseModel):
+    winner_id: str
+    loser_id: str
+
+
+@router.get("/judge/pairs/next", tags=["pairwise"], summary="The next pair to compare (pairwise mode)")
+def next_pair(db: DB, user: RequiredUser, event: str):
+    ev = event_service.get_event(db, event)
+    pair = comparisons.next_pair(db, user, ev)
+    return {"pair": list(pair) if pair else None, "progress": comparisons.judge_progress(db, user.id, ev)}
+
+
+@router.post("/judge/pairs", tags=["pairwise"], status_code=201, summary="Record which of two projects is better")
+def post_pair(db: DB, user: RequiredUser, event: str, body: CompareIn):
+    comparison_id = comparisons.record(db, user, event_service.get_event(db, event), body.winner_id, body.loser_id)
+    return {"id": comparison_id}
+
+
+@router.get("/events/{event_id}/pairwise", tags=["pairwise"], summary="Bradley-Terry ranking from direct comparisons")
+def pairwise_ranking(db: DB, user: RequiredUser, event_id: str):
+    return comparisons.ranking(db, user, event_service.get_event(db, event_id))

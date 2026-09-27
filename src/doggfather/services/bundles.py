@@ -277,6 +277,19 @@ def import_bundle(db: sqlite3.Connection, data: dict[str, Any], *, actor: User |
         if pending:
             counts["pending_assignments"] = pending
 
+        if ev.get("pairwise_enabled"):
+            db.execute("UPDATE events SET pairwise_enabled = 1 WHERE id = ?", (event_id,))
+        compared = 0
+        for c in data.get("comparisons") or []:
+            jid = judge_ids.get(c.get("judge"))
+            if jid and c.get("winner") in project_ids and c.get("loser") in project_ids:
+                db.execute("INSERT OR IGNORE INTO pairwise_comparisons (id, event_id, judge_id, winner_id, loser_id,"
+                           " created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                           (new_id("cmp"), event_id, jid, c["winner"], c["loser"], c.get("created_at") or now))
+                compared += 1
+        if compared:
+            counts["comparisons"] = compared
+
         audit.record(db, "import.bundle", actor=actor, event_id=event_id, target_type="event", target_id=event_id,
                      detail={"summary": report.summary()})
     return report
@@ -331,6 +344,7 @@ def export_bundle(db: sqlite3.Connection, event_id: str) -> dict[str, Any]:
             "normalization": event["normalization"], "results_published_at": event["results_published_at"],
             "voting_mode": event["voting_mode"], "voting_open": event["voting_open_at"],
             "voting_close": event["voting_close_at"], "vote_credits": event["vote_credits"],
+            "pairwise_enabled": bool(event["pairwise_enabled"]),
         },
         "tracks": [{"id": t["id"], "name": t["name"], "description": t["description"]}
                    for t in rows("SELECT * FROM tracks WHERE event_id = ? ORDER BY position")],
@@ -364,4 +378,7 @@ def export_bundle(db: sqlite3.Connection, event_id: str) -> dict[str, Any]:
         "assignments": [{"judge": a["judge_id"], "project": a["project_id"], "batch": a["batch"]}
                         for a in rows("SELECT * FROM assignments WHERE event_id = ? AND status = 'pending'"
                                       " ORDER BY project_id, judge_id")],
+        "comparisons": [{"judge": c["judge_id"], "winner": c["winner_id"], "loser": c["loser_id"],
+                         "created_at": c["created_at"]}
+                        for c in rows("SELECT * FROM pairwise_comparisons WHERE event_id = ? ORDER BY created_at, id")],
     }

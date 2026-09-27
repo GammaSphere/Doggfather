@@ -16,9 +16,14 @@
         {% if tracks %}<p class="small muted mb-0">Your tracks: {{ tracks|join(", ") }}</p>{% endif %}
       </div>
     </div>
+    <div class="btn-row mb-3">
     {% if next_id and event.judging_open() %}
-      <a class="btn btn--primary btn--lg mb-3" href="/judge/{{ event.slug }}/projects/{{ next_id }}">Score next project &gt;&gt;&gt;</a>
+      <a class="btn btn--primary btn--lg" href="/judge/{{ event.slug }}/projects/{{ next_id }}">Score next project &gt;&gt;&gt;</a>
     {% endif %}
+    {% if pairwise %}
+      <a class="btn btn--teal btn--lg" href="/judge/{{ event.slug }}/compare">Pairwise mode ({{ pairwise.done }} compared) &gt;&gt;&gt;</a>
+    {% endif %}
+    </div>
     {% if items %}
     <ol class="queue">
       {% for q in items %}

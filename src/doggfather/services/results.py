@@ -65,7 +65,12 @@ def compute_table(db: sqlite3.Connection, event: Event, method: str | None = Non
         " WHERE p.event_id = ? AND p.status = 'submitted'",
         (event.id,),
     )
-    results = {m: normalization.compute(m, obs) for m in METHODS}
+    results = {m: normalization.compute(m, obs) for m in METHODS if m != "pairwise"}
+    direct = [(r["winner_id"], r["loser_id"], 1.0) for r in fetch_all(
+        db, "SELECT c.winner_id, c.loser_id FROM pairwise_comparisons c JOIN projects w ON w.id = c.winner_id"
+            " JOIN projects l ON l.id = c.loser_id WHERE c.event_id = ? AND w.status = 'submitted'"
+            " AND l.status = 'submitted'", (event.id,))]
+    results["pairwise"] = normalization.within_judge_bt(obs, direct)
     reviews: dict[str, int] = {}
     for o in obs:
         reviews[o.project] = reviews.get(o.project, 0) + 1

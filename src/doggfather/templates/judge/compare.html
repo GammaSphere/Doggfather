@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Compare · {{ event.name }}{% endblock %}
+{% block head %}<script src="/static/js/compare.js?v={{ version }}" defer></script>{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/judge">Judge</a><a href="/judge/{{ event.slug }}">{{ event.name }}</a><span>Pairwise</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ PAIRWISE / BRADLEY–TERRY ]</p>
+        <h1 class="display display--lg">Which is <span class="accent">better?</span></h1>
+      </div>
+      <div class="stack">
+        {{ ui.progress(progress.done, progress.possible, "teal") }}
+        <p class="small muted mb-0">{{ progress.done }} of {{ progress.possible }} possible pairs compared. There is no need to finish: every comparison sharpens the ranking. Keys: <kbd>←</kbd> or <kbd>A</kbd> for the left, <kbd>→</kbd> or <kbd>B</kbd> for the right.</p>
+      </div>
+    </div>
+    {% if not open %}
+      {% call ui.empty("Judging is not open") %}{% endcall %}
+    {% elif not a %}
+      {% call ui.empty("Nothing left to compare", "You have compared every pair in your pool. Thank you!") %}<a class="btn" href="/judge/{{ event.slug }}">Back to queue</a>{% endcall %}
+    {% else %}
+    <div class="grid grid--2">
+      {% for p, other, side in [(a, b, "A"), (b, a, "B")] %}
+      <form method="post" action="/judge/{{ event.slug }}/compare" class="card card--panel stack" data-side="{{ side }}">
+        {{ ui.csrf() }}
+        <input type="hidden" name="winner" value="{{ p.id }}"><input type="hidden" name="loser" value="{{ other.id }}">
+        <div class="card__head"><span class="kicker">Option {{ side }}</span>{% if p.track_name %}<span class="tag tag--pink">{{ p.track_name }}</span>{% endif %}</div>
+        <h2 class="display display--sm">{{ p.title }}</h2>
+        {% if p.tagline %}<p class="lead" style="font-size: 1.05rem">{{ p.tagline }}</p>{% endif %}
+        <div class="prose small">{{ (p.description or "")[:900]|paras }}</div>
+        <div class="btn-row">
+          {% if p.repo_url %}<a class="btn btn--sm" href="{{ p.repo_url|safe_url }}" target="_blank" rel="noopener nofollow ugc">Source</a>{% endif %}
+          {% if p.demo_url %}<a class="btn btn--sm" href="{{ p.demo_url|safe_url }}" target="_blank" rel="noopener nofollow ugc">Demo</a>{% endif %}
+          <a class="btn btn--sm" href="/projects/{{ p.id }}" target="_blank">Full page</a>
+        </div>
+        <button class="btn btn--primary btn--lg btn--block" type="submit">{{ side }} is better &gt;&gt;&gt;</button>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
