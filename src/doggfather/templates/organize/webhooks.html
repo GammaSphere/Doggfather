@@ -1,0 +1,55 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Webhooks{% endblock %}
+{% block body %}
+{% if created %}
+<div class="card card--teal mb-3">
+  <div class="card__head"><h2 class="card__title">Signing secret</h2>{{ ui.status("Shown once", "warn") }}</div>
+  <div class="copy-row"><input id="hook-secret" value="{{ created.secret }}" readonly aria-label="Signing secret"><button class="btn btn--teal" type="button" data-copy="#hook-secret">Copy</button></div>
+  <p class="small muted mt-1 mb-0">Verify <code>X-Doggfather-Signature: t=…,v1=…</code> as HMAC-SHA256(secret, "t.body") and reject stale timestamps.</p>
+</div>
+{% endif %}
+<div class="grid grid--split">
+  <div>
+    {{ ui.shead("01", "Endpoints") }}
+    {% for h in hooks %}
+      <div class="card mb-1">
+        <div class="card__head"><h3 class="card__title"><code>{{ h.url }}</code></h3><span class="kicker">{{ h.topics }}</span></div>
+        <div class="between">
+          <span class="small">{{ h.delivered }} delivered · {{ h.pending }} pending · <span class="{% if h.failed %}pink{% endif %}">{{ h.failed }} failed</span></span>
+          <span class="cluster">
+            <form method="post" action="/organize/{{ event.slug }}/webhooks/{{ h.id }}/test" class="inline-form">{{ ui.csrf() }}<button class="btn btn--sm" type="submit">Send ping</button></form>
+            <form method="post" action="/organize/{{ event.slug }}/webhooks/{{ h.id }}/delete" class="inline-form" data-confirm="Remove this webhook?">{{ ui.csrf() }}<button class="btn btn--sm btn--danger" type="submit">Remove</button></form>
+          </span>
+        </div>
+      </div>
+    {% else %}
+      {% call ui.empty("No webhooks", "Push submissions, scores and results into Discord bots, spreadsheets or your own tools.") %}{% endcall %}
+    {% endfor %}
+    <div class="mt-3">{{ ui.shead("02", "Delivery log") }}</div>
+    <div class="table-wrap">
+      <table class="table table--dense">
+        <thead><tr><th>When</th><th>Topic</th><th>Status</th><th class="num">Tries</th><th>Last result</th></tr></thead>
+        <tbody>
+        {% for d in deliveries %}
+          <tr><td class="small">{{ d.created_at|ago }}</td><td><code class="small">{{ d.topic }}</code></td>
+            <td>{{ ui.status(d.status, "ok" if d.status == "delivered" else ("pink" if d.status == "failed" else "warn")) }}</td>
+            <td class="num">{{ d.attempts }}</td><td class="small">{{ d.last_status_code or "" }} {{ d.last_error or "" }}</td></tr>
+        {% else %}<tr><td colspan="5" class="muted">Nothing sent yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <form method="post" action="/organize/{{ event.slug }}/webhooks" class="card card--panel form">
+    {{ ui.csrf() }}
+    <div class="card__head"><h2 class="card__title">Add webhook</h2></div>
+    {{ ui.field("url", "Payload URL", "", type="url", required=True, errors=errors, placeholder="https://bot.example.org/hooks/doggfather") }}
+    <fieldset>
+      <legend>Topics (none = all)</legend>
+      <div class="stack">{% for topic, label in topics.items() %}<label class="check"><input type="checkbox" name="topics" value="{{ topic }}"> <code>{{ topic }}</code> <span class="dim small">{{ label }}</span></label>{% endfor %}</div>
+      {% if errors.get("topics") %}<span class="field__error">{{ errors.topics }}</span>{% endif %}
+    </fieldset>
+    <div class="form__actions"><button class="btn btn--primary" type="submit">Add webhook &gt;&gt;&gt;</button></div>
+    <p class="small muted mb-0">Deliveries are queued in the same transaction as the change, retried with backoff (8 tries), and signed.</p>
+  </form>
+</div>
+{% endblock %}

@@ -16,7 +16,7 @@ from .. import audit, clock, policy
 from ..auth import User
 from ..db import fetch_all, fetch_one, new_id, placeholders, transaction
 from ..errors import Forbidden, NotFound, ValidationFailed
-from . import rubric
+from . import rubric, webhooks
 from .events import get_event
 from .projects import get_project
 
@@ -126,6 +126,8 @@ def save_score(db: sqlite3.Connection, judge: User, project_id: str, values: dic
         db.execute("UPDATE assignments SET status = 'done' WHERE id = ?", (assignment["id"],))
         audit.record(db, "score.update" if existing else "score.submit", actor=judge, event_id=event.id,
                      target_type="project", target_id=project_id, detail={"title": project["title"]})
+        webhooks.emit(db, event.id, "score.submitted",
+                      {"project_id": project_id, "judge_id": judge.id, "revised": existing is not None})
     return score_id
 
 

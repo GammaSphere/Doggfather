@@ -22,7 +22,7 @@ from ..auth import User
 from ..config import Settings
 from ..db import fetch_all, fetch_one, fetch_value, new_id, transaction
 from ..errors import Conflict, Forbidden, NotFound, SubmissionsClosed, ValidationFailed
-from . import duplicates, uploads
+from . import duplicates, uploads, webhooks
 from .events import Event, get_event, list_questions, list_tracks
 from .teams import team_for_user
 
@@ -274,6 +274,8 @@ def update_project(db: sqlite3.Connection, actor: User, project_id: str, payload
             db.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (clock.now_iso(), project_id))
             audit.record(db, "project.update", actor=actor, event_id=event.id, target_type="project",
                          target_id=project_id, detail={"title": values.get("title", project["title"]), "fields": changed})
+            if project["status"] == "submitted":
+                webhooks.emit(db, event.id, "project.updated", {"project_id": project_id, "fields": changed})
     return changed
 
 
@@ -292,6 +294,9 @@ def submit_project(db: sqlite3.Connection, actor: User, project_id: str) -> None
         audit.record(db, "project.submit", actor=actor, event_id=event.id, target_type="project",
                      target_id=project_id, detail={"title": project["title"]})
         duplicates.refresh(db, event.id)
+        webhooks.emit(db, event.id, "project.submitted", {
+            "project_id": project_id, "title": project["title"], "team_id": project["team_id"],
+            "track_id": project["track_id"], "url": f"/projects/{project_id}"})
 
 
 def unsubmit_project(db: sqlite3.Connection, actor: User, project_id: str) -> None:

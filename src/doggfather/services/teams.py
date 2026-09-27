@@ -17,6 +17,7 @@ from ..auth import User
 from ..db import fetch_all, fetch_one, fetch_value, new_id, transaction
 from ..errors import Conflict, Forbidden, NotFound, SubmissionsClosed, ValidationFailed
 from ..security import new_token
+from . import webhooks
 from .events import Event, get_event
 
 
@@ -94,6 +95,7 @@ def create_team(db: sqlite3.Connection, actor: User, event: Event, name: str) ->
                    (team_id, event.id, actor.id, now))
         audit.record(db, "team.create", actor=actor, event_id=event.id, target_type="team", target_id=team_id,
                      detail={"name": name})
+        webhooks.emit(db, event.id, "team.created", {"team_id": team_id, "name": name})
     return team_id
 
 

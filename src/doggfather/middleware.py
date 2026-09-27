@@ -3,7 +3,7 @@
 For every dynamic request this middleware:
 
 1. opens one SQLite connection (closed when the response is fully sent),
-2. resolves the session cookie into ``request.state.user``,
+2. resolves a bearer token or the session cookie into ``request.state.user``,
 3. makes sure the browser has a CSRF token cookie,
 4. adds security headers to the response.
 
@@ -20,6 +20,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from . import auth, db
 from .csrf import CSRF_COOKIE
 from .security import new_token
+from .services import tokens
 
 SKIP_PREFIXES = ("/static/",)
 EMBED_PREFIXES = ("/embed/",)
@@ -52,9 +53,17 @@ class RequestContextMiddleware:
         state["db"] = conn
         try:
             user = None
-            token = request.cookies.get(auth.SESSION_COOKIE)
-            if token:
-                user = auth.resolve_session(conn, settings, token)
+            token = None
+            authorization = request.headers.get("authorization", "")
+            if authorization.lower().startswith("bearer "):
+                # API clients: the token alone decides; cookies are ignored so a
+                # bearer request can never ride on a browser session.
+                state["via_bearer"] = True
+                user = tokens.resolve(conn, authorization[7:].strip())
+            else:
+                token = request.cookies.get(auth.SESSION_COOKIE)
+                if token:
+                    user = auth.resolve_session(conn, settings, token)
             state["user"] = user
             state["session_token"] = token if user else None
             state["nav"] = auth.nav_for(conn, user)

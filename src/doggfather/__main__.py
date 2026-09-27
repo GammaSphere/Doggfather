@@ -70,6 +70,18 @@ def cmd_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_openapi(args: argparse.Namespace) -> int:
+    """Print the OpenAPI document (committed as docs/openapi.json)."""
+    import tempfile
+
+    from .app import create_app
+
+    with tempfile.TemporaryDirectory() as tmp:
+        app = create_app(load_settings(data_dir=Path(tmp), secret_key="openapi", webhook_worker=False))
+        print(json.dumps(app.openapi(), indent=2, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="doggfather", description="Doggfather hackathon platform")
     sub = parser.add_subparsers(dest="command")
@@ -89,6 +101,9 @@ def build_parser() -> argparse.ArgumentParser:
     imp = sub.add_parser("import", help="import an event bundle (fixtures.json shape)")
     imp.add_argument("bundle")
     imp.set_defaults(func=cmd_import)
+
+    openapi = sub.add_parser("openapi", help="print the OpenAPI document")
+    openapi.set_defaults(func=cmd_openapi)
     return parser
 
 

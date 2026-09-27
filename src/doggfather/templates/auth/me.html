@@ -48,7 +48,11 @@
           <button class="btn btn--danger" type="submit">Sign out other sessions</button>
         </form>
       </div>
-      {% block account_extra %}{% endblock %}
+      <div class="card">
+        <div class="card__head"><h2 class="card__title">API tokens</h2><span class="kicker">REST API v1</span></div>
+        <p class="small muted">Script anything the UI does: exports, submissions, judging, webhooks.</p>
+        <div class="btn-row"><a class="btn" href="/me/tokens">Manage tokens</a><a class="btn btn--sm" href="/api/docs">API reference</a></div>
+      </div>
     </div>
   </div>
 </section>

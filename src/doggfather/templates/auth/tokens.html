@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}API tokens{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <nav class="crumbs"><a href="/me">Dashboard</a><span>API tokens</span></nav>
+    <h1 class="display display--lg">API <span class="accent">tokens</span></h1>
+    <p class="lead mt-2 mb-3">A token acts as you, with exactly your permissions. Revoke any token you no longer use.</p>
+    {% if created %}
+      <div class="card card--teal mb-3">
+        <div class="card__head"><h2 class="card__title">Your new token</h2>{{ ui.status("Shown once", "warn") }}</div>
+        <div class="copy-row"><input id="new-token" value="{{ created }}" readonly aria-label="New token"><button class="btn btn--teal" type="button" data-copy="#new-token">Copy</button></div>
+        <pre class="mt-2 mb-0">curl -H "Authorization: Bearer {{ created }}" {{ base_url }}/api/v1/me</pre>
+      </div>
+    {% endif %}
+    <form method="post" action="/me/tokens" class="card card--panel form mb-3">
+      {{ ui.csrf() }}
+      {{ ui.field("name", "Token name", "", errors=errors, placeholder="discord-bot, export-script…", attrs='maxlength="60"') }}
+      <div class="form__actions"><button class="btn btn--primary" type="submit">Create token &gt;&gt;&gt;</button></div>
+    </form>
+    {% if tokens %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Name</th><th>Token</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+        <tbody>
+        {% for t in tokens %}
+          <tr><td><strong>{{ t.name }}</strong></td><td><code>{{ t.prefix }}…</code></td><td class="small">{{ t.created_at|date }}</td>
+            <td class="small">{{ t.last_used_at|ago if t.last_used_at else "never" }}</td>
+            <td class="right"><form method="post" action="/me/tokens/{{ t.id }}/revoke" class="inline-form" data-confirm="Revoke {{ t.name }}?">{{ ui.csrf() }}<button class="linkish small" type="submit">revoke</button></form></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

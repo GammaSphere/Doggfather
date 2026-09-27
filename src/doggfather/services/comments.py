@@ -13,6 +13,7 @@ from .. import audit, clock, policy
 from ..auth import User
 from ..db import fetch_all, fetch_one, new_id, transaction
 from ..errors import Conflict, NotFound, ValidationFailed
+from . import webhooks
 from .projects import get_project
 
 MAX_LENGTH = 2000
@@ -42,8 +43,11 @@ def add_comment(db: sqlite3.Connection, user: User, project_id: str, body: str, 
                  (user.id, project_id, body, since)):
         raise Conflict("You just posted that.", code="duplicate_comment")
     comment_id = new_id("cmt")
-    db.execute("INSERT INTO comments (id, project_id, user_id, body, created_at, ip_hash) VALUES (?, ?, ?, ?, ?, ?)",
-               (comment_id, project_id, user.id, body, clock.now_iso(), ip_hash))
+    with transaction(db):
+        db.execute("INSERT INTO comments (id, project_id, user_id, body, created_at, ip_hash) VALUES (?, ?, ?, ?, ?, ?)",
+                   (comment_id, project_id, user.id, body, clock.now_iso(), ip_hash))
+        webhooks.emit(db, project["event_id"], "comment.created",
+                      {"project_id": project_id, "comment_id": comment_id, "author": user.name})
     return comment_id
 
 

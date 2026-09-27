@@ -16,7 +16,7 @@ from .. import audit, clock, policy
 from ..auth import User
 from ..db import fetch_all, transaction
 from ..errors import Conflict, ResultsHidden, ValidationFailed
-from . import normalization, rubric
+from . import normalization, rubric, webhooks
 from .events import Event, get_event
 from .normalization import METHODS, Observation
 
@@ -158,6 +158,10 @@ def publish(db: sqlite3.Connection, actor: User, event: Event) -> Event:
                    (clock.now_iso(), clock.now_iso(), event.id))
         audit.record(db, "results.publish", actor=actor, event_id=event.id, target_type="event", target_id=event.id,
                      detail={"method": normalization.METHOD_LABELS[event.normalization]})
+        top = compute_table(db, event).rows[:10]
+        webhooks.emit(db, event.id, "results.published", {
+            "method": event.normalization, "url": f"/events/{event.slug}/results",
+            "top": [{"rank": r["rank"], "project_id": r["id"], "title": r["title"]} for r in top]})
     return get_event(db, event.id)
 
 

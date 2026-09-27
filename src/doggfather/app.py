@@ -19,11 +19,14 @@ from .csrf import csrf_protect
 from .errors import AppError
 from .middleware import RequestContextMiddleware
 from .ratelimit import RateLimiter
+from .services import webhooks
 from .web import auth as auth_pages
 from .web import events as event_pages
 from .api import judging as judging_api
 from .api import organizer as organizer_api
-from .web import admin, gallery, integrity, judge, organizer, organizer_judging, projects, public, system, teams, vote
+from .api import v1 as api_v1
+from .web import (admin, gallery, integrity, judge, organizer, organizer_judging, platform, projects, public, system,
+                  teams, vote)
 from .web.templating import build_environment, render
 
 PACKAGE_DIR = Path(__file__).parent
@@ -96,7 +99,13 @@ async def handle_unexpected(request: Request, exc: Exception):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    dispatcher = None
+    if app.state.settings.webhook_worker:
+        dispatcher = webhooks.Dispatcher(app.state.settings)
+        dispatcher.start()
     yield
+    if dispatcher is not None:
+        dispatcher.stop()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -130,6 +139,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(system.router)
     app.include_router(judging_api.router)
     app.include_router(organizer_api.router)
+    app.include_router(api_v1.router)
+    app.include_router(platform.router)
     app.include_router(public.router)
     app.include_router(auth_pages.router)
     app.include_router(event_pages.router)

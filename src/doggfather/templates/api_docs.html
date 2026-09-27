@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}API reference{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ API / v{{ spec.info.version }} ]</p>
+        <h1 class="display display--lg">REST <span class="accent">API</span></h1>
+      </div>
+      <p class="lead">Everything the UI does, as JSON. Same permissions, same deadlines, same validation: every endpoint calls the service the page calls.</p>
+    </div>
+
+    <div class="grid grid--2 mb-3">
+      <div class="card card--panel">
+        <div class="card__head"><h2 class="card__title">Authenticate</h2></div>
+        <pre>curl -H "Authorization: Bearer dgf_…" {{ base_url }}/api/v1/me</pre>
+        <p class="small muted mb-0">Create a token on <a href="/me/tokens">your dashboard</a>. Browser sessions work too (JSON requests need no CSRF token; cross-origin ones are refused).</p>
+      </div>
+      <div class="card">
+        <div class="card__head"><h2 class="card__title">Machine-readable</h2></div>
+        <ul class="arrows">
+          <li><a href="/api/openapi.json">OpenAPI 3.1 document</a> (live)</li>
+          <li><code>docs/openapi.json</code> in the repository, checked for drift in the test suite</li>
+          <li>Errors: <code>{"error": "code", "message": "…"}</code> with the matching HTTP status</li>
+        </ul>
+      </div>
+    </div>
+
+    {% for tag, ops in groups.items() %}
+      <div class="mt-3">{{ ui.shead("%02d"|format(loop.index), tag) }}</div>
+      <div class="table-wrap">
+        <table class="table table--dense">
+          <tbody>
+          {% for op in ops %}
+            <tr>
+              <td class="nowrap" style="width: 80px"><span class="tag {% if op.method == 'GET' %}tag--teal{% elif op.method == 'DELETE' %}tag--pink{% else %}tag--warn{% endif %}">{{ op.method }}</span></td>
+              <td class="nowrap"><code>{{ op.path }}</code></td>
+              <td>{{ op.summary }}{% if op.params %} <span class="dim small">?{{ op.params|join("&") }}</span>{% endif %}{% if op.body %} <span class="dim small">body: {{ op.body }}</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+
+    <div class="mt-4">{{ ui.shead("%02d"|format(groups|length + 1), "Request bodies") }}</div>
+    <div class="grid grid--3">
+      {% for name, schema in schemas.items() %}
+      <div class="card">
+        <div class="card__head"><h3 class="card__title">{{ name }}</h3></div>
+        <dl class="kv">
+          {% for field, prop in schema.get("properties", {}).items() %}
+            <dt>{{ field }}{% if field in schema.get("required", []) %} <span class="pink">*</span>{% endif %}</dt>
+            <dd class="small">{{ prop.get("type") or (prop.get("anyOf", [{}])[0].get("type")) or ("enum" if prop.get("enum") else "object") }}{% if prop.get("enum") %}: {{ prop.enum|join(" | ") }}{% endif %}{% if prop.get("description") %} · <span class="muted">{{ prop.description }}</span>{% endif %}</dd>
+          {% endfor %}
+        </dl>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

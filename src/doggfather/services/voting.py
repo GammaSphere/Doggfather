@@ -43,7 +43,7 @@ from ..config import Settings
 from ..db import fetch_all, fetch_one, fetch_value, new_id, transaction
 from ..errors import Conflict, Forbidden, NotAuthenticated, NotFound, ResultsHidden, ValidationFailed
 from ..security import keyed_hash, token_hash
-from . import mailer
+from . import mailer, webhooks
 from .events import Event
 
 CODE_TTL = timedelta(minutes=15)
@@ -275,6 +275,7 @@ def cast_ballot(db: sqlite3.Connection, event: Event, voter: Voter, allocation: 
                        [(voter.id, pid, votes, now) for pid, votes in clean.items()])
         audit.record(db, "vote.ballot", event_id=event.id, target_type="voter", target_id=voter.id,
                      detail={"votes": sum(clean.values()), "projects": len(clean), "credits": cost})
+        webhooks.emit(db, event.id, "vote.cast", {"projects": len(clean), "votes": sum(clean.values())})
     return clean
 
 
