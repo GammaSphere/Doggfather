@@ -26,7 +26,15 @@
     </div>
     {% endif %}
 
-    {{ ui.shead("02", "Overall") }}
+    {% if community %}
+    {{ ui.shead("02", "Community choice") }}
+    <div class="panels mb-3">
+      {% for r in community[:5] %}
+      <div class="between"><span><strong class="pink">#{{ r.rank }}</strong> <a href="/projects/{{ r.id }}">{{ r.title }}</a> <span class="small muted">{{ r.team_name }}</span></span><span class="small">{{ r.votes }} votes · {{ r.voters }} voters</span></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {{ ui.shead("03" if community else "02", "Judges' ranking") }}
     <div class="table-wrap">
       <table class="table">
         <thead><tr><th class="num">Rank</th><th>Project</th><th>Team</th><th>Track</th><th class="num">Reviews</th><th class="num">Score</th></tr></thead>

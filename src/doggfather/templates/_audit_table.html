@@ -1,0 +1,18 @@
+<div class="table-wrap">
+  <table class="table table--dense">
+    <thead><tr><th class="num">#</th><th>When</th><th>What happened</th><th>Action</th><th>Hash</th></tr></thead>
+    <tbody>
+    {% for e in entries %}
+      <tr>
+        <td class="num dim">{{ e.id }}</td>
+        <td class="small nowrap" title="{{ e.at }}">{{ e.at|dt }}</td>
+        <td>{{ e.sentence }}</td>
+        <td><code class="small">{{ e.action }}</code></td>
+        <td><code class="small dim" title="{{ e.hash }}">{{ e.hash[:10] }}</code></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">No entries yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>

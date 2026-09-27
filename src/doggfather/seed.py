@@ -102,7 +102,11 @@ def seed(db: sqlite3.Connection, settings: Settings, fixtures: dict | None = Non
         report = bundles.import_bundle(
             db, fixtures, actor=organizer,
             overrides={"judging_close": clock.iso(clock.now() + JUDGING_WINDOW),
-                       "tagline": fixtures["event"].get("tagline") or "The shared DOGFOOD fixture event"},
+                       "tagline": fixtures["event"].get("tagline") or "The shared DOGFOOD fixture event",
+                       # Email-gated quadratic vote, open for the same window as judging.
+                       "voting_mode": fixtures["event"].get("voting_mode", "email"),
+                       "voting_open": clock.iso(clock.now() - timedelta(hours=1)),
+                       "voting_close": clock.iso(clock.now() + JUDGING_WINDOW)},
         )
 
         # The fixtures carry unfinished review batches (8 projects with only two

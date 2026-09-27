@@ -60,7 +60,8 @@ def _defaults() -> dict[str, str]:
 def new_event_page(request: Request, db: DB, user: RequiredUser):
     if not event_service.can_create_events(db, user):
         raise Forbidden("Ask an admin to make you an organizer first.")
-    return render(request, "organize/new.html", {"values": _defaults(), "errors": {}})
+    return render(request, "organize/new.html", {"values": _defaults(), "errors": {},
+                                                 "voting_modes": event_service.VOTING_MODES})
 
 
 @router.post("/new")
@@ -71,7 +72,8 @@ def new_event_submit(request: Request, db: DB, user: RequiredUser, form: Form):
     try:
         event = event_service.create_event(db, user, values)
     except ValidationFailed as exc:
-        return render(request, "organize/new.html", {"values": values, "errors": exc.fields}, status_code=422)
+        return render(request, "organize/new.html", {"values": values, "errors": exc.fields,
+                                                     "voting_modes": event_service.VOTING_MODES}, status_code=422)
     return redirect(request, f"/organize/{event.slug}", f"“{event.name}” is live. Add tracks and prizes next.")
 
 
@@ -113,6 +115,7 @@ def _settings_page(request: Request, db, event: Event, *, values=None, errors=No
         "questions": event_service.list_questions(db, event.id),
         "organizers": event_service.organizers(db, event.id),
         "question_kinds": event_service.QUESTION_KINDS,
+        "voting_modes": event_service.VOTING_MODES,
     }, status_code=status_code)
 
 

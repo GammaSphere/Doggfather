@@ -23,7 +23,7 @@ from .web import auth as auth_pages
 from .web import events as event_pages
 from .api import judging as judging_api
 from .api import organizer as organizer_api
-from .web import gallery, judge, organizer, organizer_judging, projects, public, system, teams
+from .web import admin, gallery, judge, organizer, organizer_judging, projects, public, system, teams, vote
 from .web.templating import build_environment, render
 
 PACKAGE_DIR = Path(__file__).parent
@@ -138,6 +138,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(organizer_judging.invites)
     app.include_router(teams.router)
     app.include_router(judge.router)
+    app.include_router(vote.router)
+    app.include_router(admin.router)
     app.include_router(gallery.router)
     app.include_router(projects.router)
     return app

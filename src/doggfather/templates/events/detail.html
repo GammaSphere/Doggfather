@@ -28,6 +28,7 @@
             <a class="btn" href="/events/{{ event.slug }}/team">Your team</a>
           {% endif %}
           <a class="btn" href="/projects?event={{ event.id }}">Gallery ({{ counts.submitted }})</a>
+          {% if event.voting_open() %}<a class="btn btn--teal" href="/vote/{{ event.slug }}">Vote &gt;&gt;&gt;</a>{% endif %}
           {% if event.results_published %}<a class="btn btn--teal" href="/events/{{ event.slug }}/results">Results</a>{% endif %}
         </div>
       </div>

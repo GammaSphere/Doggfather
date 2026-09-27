@@ -1,0 +1,50 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Community vote{% endblock %}
+{% block body %}
+{% if not event.voting_enabled %}
+  {% call ui.empty("Community voting is off", "Turn it on in Settings: pick a gate and a window.") %}<a class="btn" href="/organize/{{ event.slug }}/settings">Settings</a>{% endcall %}
+{% else %}
+<div class="tiles mb-3">
+  {{ ui.tile(voters|length, "Unit / Voters", event.voting_mode ~ " gate") }}
+  {{ ui.tile(voters|selectattr("votes")|list|length, "Unit / Ballots", "voters who cast votes", "teal") }}
+  {{ ui.tile(flagged, "Unit / Flagged", "for your review") }}
+  {{ ui.tile(event.vote_credits, "Unit / Credits", "per voter, n votes cost n²", "teal") }}
+</div>
+<div class="notice mb-3">{% if event.tally_public %}The tally is public.{% else %}Live tally, visible to organizers only. The public sees it after voting closes ({{ event.voting_close_at|dt }}) and results are published.{% endif %}</div>
+
+<div class="grid grid--split">
+  <div>
+    {{ ui.shead("01", "Tally") }}
+    <div class="table-wrap">
+      <table class="table table--dense">
+        <thead><tr><th class="num">Rank</th><th>Project</th><th class="num">Votes</th><th class="num">Voters</th></tr></thead>
+        <tbody>{% for r in tally %}<tr><td class="num">{{ r.rank }}</td><td><strong>{{ r.title }}</strong> <span class="dim small">{{ r.team_name }}</span></td><td class="num pink">{{ r.votes }}</td><td class="num">{{ r.voters }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    {{ ui.shead("02", "Voters") }}
+    <div class="table-wrap">
+      <table class="table table--dense">
+        <thead><tr><th>Voter</th><th class="num">Credits</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for v in voters[:200] %}
+          <tr class="{% if v.voided_at %}muted{% endif %}">
+            <td class="small">{{ v.email or ("account " ~ v.user_id if v.user_id else "device " ~ v.id) }}<br><span class="dim">{{ v.kind }} · {{ v.created_at|ago }}</span></td>
+            <td class="num">{{ v.spent }}</td>
+            <td>{% if v.voided_at %}{{ ui.status("voided") }}{% elif v.flagged %}<span class="tag tag--warn" title="{{ v.flagged }}">flagged</span>{% else %}{{ ui.status("ok", "ok") }}{% endif %}</td>
+            <td class="right">
+              <form method="post" action="/organize/{{ event.slug }}/votes/{{ v.id }}" class="inline-form">
+                {{ ui.csrf() }}<input type="hidden" name="action" value="{{ 'restore' if v.voided_at else 'void' }}">
+                <button class="linkish small" type="submit">{{ "restore" if v.voided_at else "void" }}</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

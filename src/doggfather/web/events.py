@@ -10,7 +10,7 @@ from ..db import fetch_all
 from ..deps import DB
 from ..errors import ResultsHidden
 from ..services import events as event_service
-from ..services import normalization, results
+from ..services import normalization, results, voting
 from .templating import render
 
 router = APIRouter(include_in_schema=False)
@@ -56,6 +56,7 @@ def results_page(request: Request, db: DB, user: CurrentUser, slug: str):
         "event": event, "table": table, "leaders": leaders,
         "method_label": normalization.METHOD_LABELS[table.method],
         "preview": not event.results_published,
+        "community": voting.tally(db, event)[:10] if event.voting_enabled and event.tally_public else None,
     })
 
 

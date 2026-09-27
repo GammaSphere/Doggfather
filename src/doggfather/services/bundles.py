@@ -106,12 +106,16 @@ def import_bundle(db: sqlite3.Connection, data: dict[str, Any], *, actor: User |
         slug = unique_slug(db, slugify(str(ev.get("slug") or name)))
         db.execute(
             "INSERT INTO events (id, slug, name, tagline, description, submissions_open_at, submissions_close_at,"
-            " judging_close_at, max_team_size, review_target, normalization, results_published_at, created_by,"
-            " created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " judging_close_at, max_team_size, review_target, normalization, results_published_at, voting_mode,"
+            " voting_open_at, voting_close_at, vote_credits, created_by, created_at, updated_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (event_id, slug, name, ev.get("tagline", ""), ev.get("description", ""), opens, close, judging_close,
              int(ev.get("max_team_size", 4)), int(ev.get("review_target", 3)), ev.get("normalization", "bias"),
              _ts(ev["results_published_at"], "event.results_published_at") if ev.get("results_published_at") else None,
-             actor.id if actor else None, now, now),
+             ev.get("voting_mode", "off"),
+             _ts(ev["voting_open"], "event.voting_open") if ev.get("voting_open") else None,
+             _ts(ev["voting_close"], "event.voting_close") if ev.get("voting_close") else None,
+             int(ev.get("vote_credits", 25)), actor.id if actor else None, now, now),
         )
         if actor is not None:
             db.execute("INSERT OR IGNORE INTO event_members VALUES (?, ?, 'organizer', ?)", (event_id, actor.id, now))

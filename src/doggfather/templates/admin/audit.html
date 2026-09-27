@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Audit trail{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/admin">Admin</a><span>Audit trail</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ AUDIT / GLOBAL ]</p>
+        <h1 class="display display--lg">Audit <span class="accent">trail</span></h1>
+      </div>
+      <div>{% if chain.ok %}{{ ui.status("Hash chain intact · " ~ chain.checked ~ " entries verified", "ok") }}{% else %}{{ ui.status("Chain broken at entry #" ~ chain.broken_at, "pink") }}{% endif %}</div>
+    </div>
+    {% include "_audit_table.html" %}
+  </div>
+</section>
+{% endblock %}

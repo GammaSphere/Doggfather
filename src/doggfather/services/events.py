@@ -17,6 +17,12 @@ from ..policy import require_organizer
 
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$")
 QUESTION_KINDS = ("text", "textarea", "url", "choice")
+VOTING_MODES = {
+    "off": "No community vote",
+    "account": "Logged-in accounts (strongest)",
+    "email": "Verified email address (one-time code)",
+    "link": "Anyone with the link (weakest; device + IP checks)",
+}
 DEFAULT_CRITERIA = (
     ("functionality", "Functionality", "Does it work end to end? Could someone use it tomorrow?"),
     ("quality", "Quality", "Is it built well: code, UX, docs, robustness?"),
@@ -39,6 +45,10 @@ class Event:
     normalization: str
     results_published_at: str | None
     created_at: str
+    voting_mode: str = "off"
+    voting_open_at: str | None = None
+    voting_close_at: str | None = None
+    vote_credits: int = 25
 
     @classmethod
     def from_row(cls, row: sqlite3.Row | dict) -> "Event":
@@ -63,6 +73,23 @@ class Event:
     @property
     def results_published(self) -> bool:
         return self.results_published_at is not None
+
+    @property
+    def voting_enabled(self) -> bool:
+        return self.voting_mode != "off" and bool(self.voting_open_at and self.voting_close_at)
+
+    def voting_open(self, now: datetime | None = None) -> bool:
+        t = self._now(now)
+        return self.voting_enabled and self.voting_open_at <= t < self.voting_close_at  # type: ignore[operator]
+
+    def voting_closed(self, now: datetime | None = None) -> bool:
+        return self.voting_enabled and self._now(now) >= self.voting_close_at  # type: ignore[operator]
+
+    @property
+    def tally_public(self) -> bool:
+        """Community tallies are hidden while voting runs, and stay hidden
+        until the organizers publish results."""
+        return self.results_published and (not self.voting_enabled or self.voting_closed())
 
     @property
     def phase(self) -> str:
@@ -94,6 +121,10 @@ class Event:
             ("Submissions close", self.submissions_close_at),
             ("Judging closes", self.judging_close_at),
         ]
+        if self.voting_enabled:
+            steps += [("Community voting opens", self.voting_open_at or ""),
+                      ("Community voting closes", self.voting_close_at or "")]
+            steps.sort(key=lambda step: step[1])
         steps.append(("Results published", self.results_published_at or ""))
         out, current_marked = [], False
         for label, when in steps:
@@ -226,6 +257,28 @@ def clean_event_values(values: dict[str, Any]) -> dict[str, Any]:
         errors["submissions_close_at"] = "The deadline must come after submissions open."
     if closes and judging and judging < closes:
         errors["judging_close_at"] = "Judging cannot close before submissions do."
+    voting_mode = str(values.get("voting_mode") or "off")
+    if voting_mode not in VOTING_MODES:
+        errors["voting_mode"] = "Pick a voting mode."
+        voting_mode = "off"
+    voting_open = voting_close = None
+    if voting_mode != "off":
+        voting_open = _parse_when(values.get("voting_open_at"), "Voting opens", errors, "voting_open_at")
+        voting_close = _parse_when(values.get("voting_close_at"), "Voting closes", errors, "voting_close_at")
+        if voting_open and voting_close and voting_open >= voting_close:
+            errors["voting_close_at"] = "Voting must close after it opens."
+    else:
+        for key in ("voting_open_at", "voting_close_at"):
+            raw = str(values.get(key) or "").strip()
+            if raw:
+                try:
+                    parsed = clock.normalize(raw)
+                except ValueError:
+                    parsed = None
+                if key == "voting_open_at":
+                    voting_open = parsed
+                else:
+                    voting_close = parsed
     clean = {
         "name": name,
         "slug": slug,
@@ -236,6 +289,10 @@ def clean_event_values(values: dict[str, Any]) -> dict[str, Any]:
         "judging_close_at": judging,
         "max_team_size": _int_in(values.get("max_team_size"), 1, 50, "max_team_size", errors, 4),
         "review_target": _int_in(values.get("review_target"), 1, 20, "review_target", errors, 3),
+        "voting_mode": voting_mode,
+        "voting_open_at": voting_open,
+        "voting_close_at": voting_close,
+        "vote_credits": _int_in(values.get("vote_credits"), 1, 10000, "vote_credits", errors, 25),
     }
     if errors:
         raise ValidationFailed(fields=errors)
@@ -253,11 +310,12 @@ def create_event(db: sqlite3.Connection, actor: User, values: dict[str, Any]) ->
             raise ValidationFailed(fields={"slug": "That address is taken."})
         db.execute(
             "INSERT INTO events (id, slug, name, tagline, description, submissions_open_at, submissions_close_at,"
-            " judging_close_at, max_team_size, review_target, created_by, created_at, updated_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " judging_close_at, max_team_size, review_target, voting_mode, voting_open_at, voting_close_at,"
+            " vote_credits, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (event_id, clean["slug"], clean["name"], clean["tagline"], clean["description"],
              clean["submissions_open_at"], clean["submissions_close_at"], clean["judging_close_at"],
-             clean["max_team_size"], clean["review_target"], actor.id, now, now),
+             clean["max_team_size"], clean["review_target"], clean["voting_mode"], clean["voting_open_at"],
+             clean["voting_close_at"], clean["vote_credits"], actor.id, now, now),
         )
         db.execute("INSERT INTO event_members VALUES (?, ?, 'organizer', ?)", (event_id, actor.id, now))
         for pos, (key, label, description) in enumerate(DEFAULT_CRITERIA):
@@ -271,7 +329,8 @@ def create_event(db: sqlite3.Connection, actor: User, values: dict[str, Any]) ->
 
 
 EDITABLE = ("name", "slug", "tagline", "description", "submissions_open_at", "submissions_close_at",
-            "judging_close_at", "max_team_size", "review_target")
+            "judging_close_at", "max_team_size", "review_target", "voting_mode", "voting_open_at",
+            "voting_close_at", "vote_credits")
 
 
 def update_event(db: sqlite3.Connection, actor: User, event: Event, values: dict[str, Any]) -> Event:

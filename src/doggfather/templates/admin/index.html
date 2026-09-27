@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ CONSOLE / ADMIN ]</p>
+        <h1 class="display display--lg">Platform <span class="accent">admin</span></h1>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="/admin/outbox">Outbox &gt;&gt;&gt;</a>
+        <a class="btn" href="/admin/audit">Audit trail</a>
+        {% if chain.ok %}{{ ui.status("Audit chain intact · " ~ chain.checked ~ " entries", "ok") }}{% else %}{{ ui.status("Audit chain broken at #" ~ chain.broken_at, "pink") }}{% endif %}
+      </div>
+    </div>
+    <form method="get" action="/admin" class="searchbar mb-2" style="max-width: 520px">
+      <input class="input" type="search" name="q" value="{{ q }}" placeholder="Find people by name or email" aria-label="Search people">
+      <button class="btn btn--primary" type="submit">Search</button>
+    </form>
+    <div class="table-wrap">
+      <table class="table table--dense">
+        <thead><tr><th>Person</th><th>Roles</th><th>Account</th><th>Joined</th><th></th></tr></thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td><strong>{{ u.name }}</strong><br><span class="small muted">{{ u.email }} · {{ u.id }}</span></td>
+            <td class="small">{{ u.roles or "—" }}{% if u.is_admin %} <span class="tag tag--pink">admin</span>{% endif %}</td>
+            <td class="small">{{ "password set" if u.password_hash else "unclaimed" }}{% if u.email_verified_at %} · verified{% endif %}</td>
+            <td class="small">{{ u.created_at|date }}</td>
+            <td class="right">
+              <form method="post" action="/admin/users/{{ u.id }}/admin" class="inline-form" data-confirm="{{ 'Remove' if u.is_admin else 'Grant' }} admin for {{ u.email }}?">
+                {{ ui.csrf() }}<input type="hidden" name="value" value="{{ 0 if u.is_admin else 1 }}">
+                <button class="linkish small" type="submit">{{ "revoke admin" if u.is_admin else "make admin" }}</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

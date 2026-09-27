@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Vote · {{ event.name }}{% endblock %}
+{% block head %}<script src="/static/js/ballot.js?v={{ version }}" defer></script>{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/events/{{ event.slug }}">{{ event.name }}</a><span>Community vote</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ BALLOT / QUADRATIC ]</p>
+        <h1 class="display display--lg">Community <span class="accent">vote</span></h1>
+      </div>
+      <p class="lead">You have {{ event.vote_credits }} credits. Casting <em>n</em> votes on one project costs <em>n²</em>: back what you love, but spreading out goes further.</p>
+    </div>
+
+    {% if gate == "closed" %}
+      {% if not event.voting_enabled %}
+        {% call ui.empty("No community vote", "This event is judged by its panel only.") %}{% endcall %}
+      {% elif event.voting_closed() %}
+        {% call ui.empty("Voting has closed", "Thanks to everyone who voted. The tally appears with the published results.") %}
+          <a class="btn" href="/events/{{ event.slug }}/results">Results</a>
+        {% endcall %}
+      {% else %}
+        {% call ui.empty("Voting opens soon", "Opens " ~ (event.voting_open_at|dt) ~ ".") %}{% endcall %}
+      {% endif %}
+
+    {% elif gate == "login" %}
+      <div class="card card--panel">
+        <p>This vote is for registered accounts: one ballot per person.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="/login?next=/vote/{{ event.slug }}">Log in &gt;&gt;&gt;</a><a class="btn" href="/register?next=/vote/{{ event.slug }}">Create account</a></div>
+      </div>
+
+    {% elif gate == "email" %}
+      <form method="post" action="/vote/{{ event.slug }}/code" class="card card--panel form" style="max-width: 560px">
+        {{ ui.csrf() }}
+        <div class="card__head"><h2 class="card__title">Verify your email</h2><span class="kicker">one ballot per address</span></div>
+        {{ ui.field("email", "Email", "", type="email", required=True, attrs='autocomplete="email" autofocus') }}
+        <div class="form__actions"><button class="btn btn--primary" type="submit">Send me a code &gt;&gt;&gt;</button></div>
+        <p class="small muted mb-0">We only use it to stop duplicate ballots. Plus-addressing and Gmail dots count as the same address.</p>
+      </form>
+
+    {% elif gate == "code" %}
+      <form method="post" action="/vote/{{ event.slug }}/verify" class="card card--panel form" style="max-width: 560px">
+        {{ ui.csrf() }}
+        <div class="card__head"><h2 class="card__title">Enter your code</h2><span class="kicker">sent to {{ pending_email }}</span></div>
+        {{ ui.field("code", "6-digit code", "", required=True, attrs='inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus') }}
+        <div class="form__actions"><button class="btn btn--primary" type="submit">Verify &gt;&gt;&gt;</button></div>
+      </form>
+      {% if demo %}<p class="small muted mt-1">Demo mode: the code is in <a href="/admin/outbox">Admin → Outbox</a>.</p>{% endif %}
+
+    {% else %}
+      <form method="post" action="/vote/{{ event.slug }}/ballot" data-ballot data-credits="{{ ballot.credits }}">
+        {{ ui.csrf() }}
+        <div class="credits between mb-2">
+          <div><span class="kicker">Credits left</span><br><span class="credits__big" data-remaining>{{ ballot.credits - ballot.spent }}</span> <span class="muted">/ {{ ballot.credits }}</span></div>
+          <div class="right">
+            <button class="btn btn--primary" type="submit">Cast ballot &gt;&gt;&gt;</button>
+            <p class="small muted mt-1 mb-0">Order is shuffled for you. Change your ballot any time until {{ event.voting_close_at|dt }}.</p>
+          </div>
+        </div>
+        {% for p in ballot["items"] %}
+        <div class="ballot-row">
+          <div>
+            <a href="/projects/{{ p.id }}" target="_blank"><strong>{{ p.title }}</strong></a>
+            <span class="small muted">· {{ p.track_name or "—" }} · {{ p.team_name }}</span>
+            {% if p.tagline %}<p class="small muted mb-0">{{ p.tagline }}</p>{% endif %}
+          </div>
+          {% if p.own %}
+            <span class="tag">your team</span>
+          {% else %}
+          <div>
+            <div class="stepper">
+              <button type="button" data-step="-1" aria-label="One vote fewer for {{ p.title }}">−</button>
+              <input type="number" name="v_{{ p.id }}" value="{{ p.votes }}" min="0" max="{{ ballot.max_votes }}" aria-label="Votes for {{ p.title }}">
+              <button type="button" data-step="1" aria-label="One vote more for {{ p.title }}">+</button>
+            </div>
+            <span class="stepper__cost" data-cost>{{ p.votes * p.votes }} credits</span>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </form>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

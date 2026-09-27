@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Outbox{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <nav class="crumbs"><a href="/admin">Admin</a><span>Outbox</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ MAIL / LOCAL ]</p>
+        <h1 class="display display--lg">Out<span class="accent">box</span></h1>
+      </div>
+      <p class="lead">Every message the portal sends lands here first. With SMTP configured it is also delivered; offline, this page is the delivery.</p>
+    </div>
+    <form method="get" action="/admin/outbox" class="searchbar mb-2">
+      <input class="input" type="search" name="to" value="{{ to }}" placeholder="Filter by recipient" aria-label="Recipient">
+      <button class="btn btn--primary" type="submit">Filter</button>
+    </form>
+    {% for m in messages %}
+      <article class="card mb-1">
+        <div class="card__head">
+          <h2 class="card__title">{{ m.subject }}</h2>
+          <span class="kicker">{{ m.created_at|ago }} · to {{ m.to_email }} · {% if m.sent_at %}sent{% elif m.error %}<span class="pink">smtp error</span>{% else %}outbox only{% endif %}</span>
+        </div>
+        <pre style="white-space: pre-wrap; margin: 0">{{ m.body }}</pre>
+      </article>
+    {% else %}
+      {% call ui.empty("Nothing sent yet") %}{% endcall %}
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
