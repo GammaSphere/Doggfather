@@ -22,7 +22,7 @@ from . import audit, auth, clock
 from .config import Settings
 from .db import fetch_value, transaction
 from .security import hash_password
-from .services import assignment, bundles
+from .services import assignment, bundles, duplicates
 from .services.events import get_event
 
 DEMO_PASSWORD = "dogfood-demo-2026"
@@ -113,6 +113,8 @@ def seed(db: sqlite3.Connection, settings: Settings, fixtures: dict | None = Non
         # reviews). Top every project up to the review target with *pending*
         # assignments so the progress dashboard shows real outstanding work.
         topup = assignment.run_auto(db, None, get_event(db, report.event_id))
+        # The fixtures carry one duplicate submission (prj_41 repeats prj_07).
+        duplicates.refresh(db, report.event_id)
         report.counts["pending_assignments"] = len(topup.created)
 
         if settings.demo:

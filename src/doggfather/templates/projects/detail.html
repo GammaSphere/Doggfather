@@ -14,6 +14,7 @@
     </div>
     <div class="cluster mb-3">
       {% if p.status != "submitted" %}{{ ui.status(p.status, "warn") }}{% endif %}
+      {% if event.voting_open() and p.status == "submitted" %}<a class="tag tag--teal" href="/vote/{{ event.slug }}">vote in the community ballot</a>{% endif %}
       {% if p.track_name %}<a class="tag tag--pink" href="/projects?event={{ event.id }}&track={{ p.track_id }}">{{ p.track_name }}</a>{% endif %}
       <span class="tag tag--teal">{{ p.team_name }}</span>
       {% for tag in p.tags %}<a class="tag" href="/projects?tag={{ tag|urlencode }}">#{{ tag }}</a>{% endfor %}
@@ -42,7 +43,32 @@
           <dl class="kv">{% for a in answered %}<dt>{{ a.prompt }}</dt><dd>{{ a.answer }}</dd>{% endfor %}</dl>
         </div>
         {% endif %}
-        {% block after_about %}{% endblock %}
+        {% if p.status == "submitted" %}
+        <div id="comments">
+          {{ ui.shead("04", "Comments") }}
+          {% for c in comments %}
+          <div class="comment {% if c.hidden_at %}is-hidden{% endif %}">
+            <div class="comment__meta"><strong>{{ c.author }}</strong> · {{ c.created_at|ago }}{% if c.hidden_at %} · hidden by organizers{% endif %}</div>
+            <div class="comment__body">{{ c.body }}</div>
+            {% if is_organizer %}
+            <form method="post" action="/comments/{{ c.id }}" class="inline-form">
+              {{ ui.csrf() }}<input type="hidden" name="action" value="{{ 'restore' if c.hidden_at else 'hide' }}">
+              <button class="linkish small" type="submit">{{ "restore" if c.hidden_at else "hide" }}</button>
+            </form>
+            {% endif %}
+          </div>
+          {% else %}<p class="small muted">No comments yet.</p>{% endfor %}
+          {% if user %}
+          <form method="post" action="/projects/{{ p.id }}/comments" class="form mt-2">
+            {{ ui.csrf() }}
+            {{ ui.textarea("body", "Add a comment", "", rows=3, help="Be kind and specific. Up to 2000 characters.") }}
+            <div class="form__actions"><button class="btn btn--sm" type="submit">Post comment</button></div>
+          </form>
+          {% else %}
+          <p class="small muted mt-1"><a href="/login?next=/projects/{{ p.id }}%23comments">Log in</a> to comment.</p>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
 
       <aside class="stack sticky-panel">

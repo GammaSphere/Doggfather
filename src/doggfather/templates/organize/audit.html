@@ -1,0 +1,14 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Audit trail{% endblock %}
+{% block body %}
+<div class="between mb-2">
+  <p class="lead mb-0">Every change that matters, in plain English. Append-only and hash-chained: editing history breaks the chain.</p>
+  <div>{% if chain.ok %}{{ ui.status("Chain intact · " ~ chain.checked ~ " entries verified", "ok") }}{% else %}{{ ui.status("Chain broken at entry #" ~ chain.broken_at, "pink") }}{% endif %}</div>
+</div>
+<div class="cluster mb-2">
+  <a class="tag {% if not kind %}is-on{% endif %}" href="/organize/{{ event.slug }}/audit">All</a>
+  {% for k in kinds %}<a class="tag {% if kind == k %}is-on{% endif %}" href="/organize/{{ event.slug }}/audit?kind={{ k }}">{{ k }}</a>{% endfor %}
+  <a class="small" href="/api/events/{{ event.id }}/export/audit.csv">Download CSV</a>
+</div>
+{% include "_audit_table.html" %}
+{% endblock %}

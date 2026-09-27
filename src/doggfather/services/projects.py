@@ -22,7 +22,7 @@ from ..auth import User
 from ..config import Settings
 from ..db import fetch_all, fetch_one, fetch_value, new_id, transaction
 from ..errors import Conflict, Forbidden, NotFound, SubmissionsClosed, ValidationFailed
-from . import uploads
+from . import duplicates, uploads
 from .events import Event, get_event, list_questions, list_tracks
 from .teams import team_for_user
 
@@ -291,6 +291,7 @@ def submit_project(db: sqlite3.Connection, actor: User, project_id: str) -> None
                    " WHERE id = ?", (now, now, project_id))
         audit.record(db, "project.submit", actor=actor, event_id=event.id, target_type="project",
                      target_id=project_id, detail={"title": project["title"]})
+        duplicates.refresh(db, event.id)
 
 
 def unsubmit_project(db: sqlite3.Connection, actor: User, project_id: str) -> None:

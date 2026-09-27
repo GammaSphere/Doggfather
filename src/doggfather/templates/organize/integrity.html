@@ -1,0 +1,61 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Integrity{% endblock %}
+{% block body %}
+<div class="tiles mb-3">
+  {{ ui.tile(duplicates|length, "Unit / Duplicates", "possible duplicate submissions") }}
+  {{ ui.tile(refused|length, "Unit / Late writes", "refused after the deadline", "teal") }}
+  {{ ui.tile(flagged_voters, "Unit / Voters", "flagged for review") }}
+  {{ ui.tile(comments|selectattr("hidden_at")|list|length, "Unit / Hidden", "comments moderated", "teal") }}
+</div>
+
+{{ ui.shead("01", "Possible duplicates") }}
+<form method="post" action="/organize/{{ event.slug }}/duplicates/scan" class="mb-2">{{ ui.csrf() }}<button class="btn btn--sm" type="submit">Scan again</button></form>
+{% if duplicates %}
+<div class="table-wrap mb-3">
+  <table class="table">
+    <thead><tr><th>Later submission</th><th>Looks like</th><th>Why</th><th></th></tr></thead>
+    <tbody>
+    {% for d in duplicates %}
+      <tr>
+        <td><a href="/projects/{{ d.id }}"><strong>{{ d.title }}</strong></a> <span class="dim small">{{ d.id }}</span><br><span class="small muted">{{ d.team_name }} · {{ d.submitted_at|dt }}</span>{% if d.status != "submitted" %} {{ ui.status(d.status) }}{% endif %}</td>
+        <td><a href="/projects/{{ d.original_id }}">{{ d.original_title }}</a> <span class="dim small">{{ d.original_id }}</span><br><span class="small muted">{{ d.original_submitted_at|dt }}</span></td>
+        <td class="small">{{ d.duplicate_reason }}</td>
+        <td class="right nowrap">
+          <form method="post" action="/organize/{{ event.slug }}/duplicates/{{ d.id }}/dismiss" class="inline-form">{{ ui.csrf() }}<button class="btn btn--sm" type="submit">Not a duplicate</button></form>
+          {% if d.status == "submitted" %}
+          <form method="post" action="/organize/{{ event.slug }}/projects/{{ d.id }}/withdraw" class="inline-form" data-confirm="Withdraw {{ d.title }} from the gallery and results?">
+            {{ ui.csrf() }}<input type="hidden" name="reason" value="duplicate of {{ d.original_id }}"><button class="btn btn--sm btn--danger" type="submit">Withdraw</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}{% call ui.empty("No duplicates flagged") %}{% endcall %}{% endif %}
+
+<div class="grid grid--2 mt-3">
+  <section>
+    {{ ui.shead("02", "Refused late writes") }}
+    <p class="small muted">Every attempt to create or change a submission after the deadline is refused by the server and recorded here.</p>
+    {% if refused %}
+    <ul class="arrows">{% for e in refused[:20] %}<li>{{ e.sentence }} <span class="dim small">· {{ e.at|dt }}</span></li>{% endfor %}</ul>
+    {% else %}<p class="small muted">None so far.</p>{% endif %}
+  </section>
+  <section>
+    {{ ui.shead("03", "Recent comments") }}
+    {% for c in comments[:20] %}
+      <div class="comment {% if c.hidden_at %}is-hidden{% endif %}">
+        <div class="comment__meta"><strong>{{ c.author }}</strong> on <a href="/projects/{{ c.project_id }}">{{ c.title }}</a> · {{ c.created_at|ago }}{% if c.hidden_at %} · hidden{% endif %}</div>
+        <div class="comment__body">{{ c.body }}</div>
+        <form method="post" action="/comments/{{ c.id }}" class="inline-form">
+          {{ ui.csrf() }}<input type="hidden" name="back" value="/organize/{{ event.slug }}/integrity">
+          <input type="hidden" name="action" value="{{ 'restore' if c.hidden_at else 'hide' }}">
+          <button class="linkish small" type="submit">{{ "restore" if c.hidden_at else "hide" }}</button>
+        </form>
+      </div>
+    {% else %}<p class="small muted">No comments yet.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

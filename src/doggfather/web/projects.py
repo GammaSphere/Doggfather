@@ -17,6 +17,7 @@ from ..deps import DB, AppSettings, Body, Limiter
 from ..errors import Forbidden, NotAuthenticated, NotFound, ValidationFailed
 from ..services import events as event_service
 from ..services import projects as project_service
+from ..services import comments as comment_service
 from ..services import uploads
 from ..services.teams import team_for_user
 from .templating import redirect, render
@@ -110,11 +111,13 @@ def project_page(request: Request, db: DB, user: CurrentUser, project_id: str):
     if not can_view(db, user, project):
         raise NotFound("No such project.")
     event = event_service.get_event(db, project["event_id"])
+    is_organizer = policy.is_organizer(db, user, event.id)
     return render(request, "projects/detail.html", {
         "event": event,
         "p": project_service.project_detail(db, project_id),
         "is_editor": project_service.is_team_member(db, user, project),
-        "is_organizer": policy.is_organizer(db, user, event.id),
+        "is_organizer": is_organizer,
+        "comments": comment_service.list_comments(db, project_id, include_hidden=is_organizer),
     })
 
 
