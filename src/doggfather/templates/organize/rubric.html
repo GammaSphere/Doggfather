@@ -1,0 +1,76 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Rubric{% endblock %}
+{% block body %}
+<div class="page-head">
+  <p class="lead">Weights apply when results are computed, not when judges score, so you can re-weight at any point and nothing stored changes.</p>
+  {% if locked %}<div class="notice notice--teal">Scoring has started: weights and wording stay editable; the scale and the set of criteria are frozen.</div>{% endif %}
+</div>
+{% if errors %}<div class="flash flash--error mb-2">Some fields need attention.</div>{% endif %}
+<form method="post" action="/organize/{{ event.slug }}/rubric" class="stack">
+  {{ ui.csrf() }}
+  {% set extra = 0 if locked else 1 %}
+  <input type="hidden" name="rows" value="{{ criteria|length + extra }}">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Criterion</th><th>Guidance for judges</th><th class="num">Weight</th><th class="num">Share</th><th class="num">Scale</th><th></th></tr></thead>
+      <tbody>
+        {% for c in criteria %}{% set i = loop.index0 %}
+        <tr>
+          <td><input type="hidden" name="c{{ i }}_id" value="{{ c.id }}">
+            <div class="field"><input class="input" name="c{{ i }}_label" value="{{ c.label }}" aria-label="Criterion name" maxlength="60"></div>
+            {% if errors.get(c.id ~ ".label") %}<span class="field__error">{{ errors[c.id ~ ".label"] }}</span>{% endif %}
+          </td>
+          <td><div class="field"><input class="input" name="c{{ i }}_description" value="{{ c.description }}" aria-label="Guidance" maxlength="300"></div></td>
+          <td class="num"><div class="field"><input class="input" style="width:88px" type="number" step="0.05" min="0" max="100" name="c{{ i }}_weight" value="{{ c.weight }}" aria-label="Weight"></div>
+            {% if errors.get(c.id ~ ".weight") %}<span class="field__error">{{ errors[c.id ~ ".weight"] }}</span>{% endif %}</td>
+          <td class="num pink">{{ (100 * c.weight / total_weight)|round|int }}%</td>
+          <td class="num nowrap">
+            <input class="input" style="width:60px" type="number" name="c{{ i }}_min" value="{{ c.min_score }}" aria-label="Minimum" {% if locked %}readonly{% endif %}>
+            –
+            <input class="input" style="width:60px" type="number" name="c{{ i }}_max" value="{{ c.max_score }}" aria-label="Maximum" {% if locked %}readonly{% endif %}>
+          </td>
+          <td>{% if not locked %}<label class="check small"><input type="checkbox" name="c{{ i }}_delete"> remove</label>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        {% if not locked %}{% set i = criteria|length %}
+        <tr>
+          <td><div class="field"><input class="input" name="c{{ i }}_label" placeholder="+ new criterion" aria-label="New criterion name" maxlength="60"></div></td>
+          <td><div class="field"><input class="input" name="c{{ i }}_description" placeholder="What should judges look for?" aria-label="New guidance"></div></td>
+          <td class="num"><div class="field"><input class="input" style="width:88px" type="number" step="0.05" min="0" max="100" name="c{{ i }}_weight" value="1" aria-label="New weight"></div></td>
+          <td></td>
+          <td class="num nowrap"><input class="input" style="width:60px" type="number" name="c{{ i }}_min" value="1" aria-label="New minimum"> – <input class="input" style="width:60px" type="number" name="c{{ i }}_max" value="5" aria-label="New maximum"></td>
+          <td></td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if tracks and criteria %}
+  <div class="card mt-2">
+    <div class="card__head"><h2 class="card__title">Per-track weights</h2><span class="kicker">blank = event weight</span></div>
+    <p class="small muted">Some tracks value different things: a security track might weigh quality twice. Leave a cell blank to inherit.</p>
+    <div class="table-wrap">
+      <table class="table table--dense">
+        <thead><tr><th>Track</th>{% for c in criteria %}<th class="num">{{ c.label }} <span class="dim">({{ c.weight }})</span></th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for t in tracks %}
+          <tr><td><strong>{{ t.name }}</strong></td>
+          {% for c in criteria %}
+            <td class="num"><input class="input" style="width:80px" type="number" step="0.05" min="0" max="100" name="ov__{{ c.id }}__{{ t.id }}" value="{{ overrides.get(t.id, {}).get(c.id, '') }}" placeholder="{{ c.weight }}" aria-label="{{ t.name }} {{ c.label }} weight"></td>
+          {% endfor %}</tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+  <div class="form__actions"><button class="btn btn--primary" type="submit">Save rubric</button></div>
+</form>
+
+<div class="card card--panel mt-3">
+  <div class="card__head"><h2 class="card__title">How a scorecard becomes a number</h2></div>
+  <pre>weighted = Σ weight(c) · score(c) / Σ weight(c)      (on the {{ criteria[0].min_score if criteria else 1 }}–{{ criteria[0].max_score if criteria else 5 }} scale)</pre>
+  <p class="small muted mb-0">Cross-judge normalization then removes each judge's harshness or generosity. The method is documented on the Results tab and in JUDGING.md.</p>
+</div>
+{% endblock %}

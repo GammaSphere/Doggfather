@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Judging invitation{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <p class="label-term mb-1">[ INVITE / JUDGE ]</p>
+    <h1 class="display display--lg">Judge <span class="accent">{{ event.name }}</span></h1>
+    <p class="lead mt-2">You were invited as <strong>{{ invite.email }}</strong>. Judges see only the projects in their tracks and only their own scores.</p>
+    <div class="card card--panel mt-3">
+      {% if invite.accepted_at %}
+        <p>This invitation has been accepted.</p>
+        <a class="btn btn--primary" href="/judge/{{ event.slug }}">Go to judging &gt;&gt;&gt;</a>
+      {% elif user %}
+        <form method="post" action="/invite/{{ token }}">
+          {{ ui.csrf() }}
+          <p class="small muted">You will accept as {{ user.name }} ({{ user.email }}).</p>
+          <button class="btn btn--primary btn--lg" type="submit">Accept invitation &gt;&gt;&gt;</button>
+        </form>
+      {% else %}
+        <p class="small muted">Log in (or create an account) to accept. New to Doggfather? Use “forgot password” with {{ invite.email }} if the organizers created an account for you.</p>
+        <div class="btn-row">
+          <a class="btn btn--primary" href="/login?next=/invite/{{ token }}">Log in &gt;&gt;&gt;</a>
+          <a class="btn" href="/register?next=/invite/{{ token }}">Create account</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

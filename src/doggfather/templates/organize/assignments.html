@@ -1,0 +1,59 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Assignments{% endblock %}
+{% block body %}
+<div class="tiles mb-3">
+  {{ ui.tile(rows|length, "Unit / Projects", "submitted and assignable") }}
+  {{ ui.tile(short, "Unit / Short", "below " ~ event.review_target ~ " reviewers", "teal") }}
+  {{ ui.tile(preview.created|length, "Unit / Next batch", "assignments an auto-run would add") }}
+  {{ ui.tile(preview.shortfall|length, "Unit / Shortfall", "projects without enough eligible judges", "teal") }}
+</div>
+
+<div class="grid grid--2 mb-3">
+  <form method="post" action="/organize/{{ event.slug }}/assignments/auto" class="card card--panel form">
+    {{ ui.csrf() }}
+    <div class="card__head"><h2 class="card__title">Automatic</h2><span class="kicker">track-aware · balanced</span></div>
+    <p class="small muted">Tops every project up to the target using judges from its track: lightest load first, then the judge who shares the fewest projects with the others on it (keeps the judge graph connected for normalization). Deterministic; safe to re-run.</p>
+    {{ ui.field("target", "Reviews per project", event.review_target, type="number", attrs='min="1" max="20"') }}
+    <div class="form__actions"><button class="btn btn--primary" type="submit">Run auto-assignment &gt;&gt;&gt;</button></div>
+  </form>
+  <form method="post" action="/organize/{{ event.slug }}/assignments/batch" class="card form">
+    {{ ui.csrf() }}
+    <div class="card__head"><h2 class="card__title">Manual batch</h2></div>
+    {{ ui.select("judge", "Judge", roster|map(attribute="id")|zip(roster|map(attribute="name"))|list, "", blank="Choose a judge", required=True) }}
+    <div class="field">
+      <label for="f-projects">Projects (hold Ctrl/Cmd to pick several)</label>
+      <select id="f-projects" name="projects" multiple size="8">
+        {% for r in rows %}<option value="{{ r.id }}">{{ r.title }} · {{ r.track_name or "no track" }} ({{ r.reviews|length }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form__actions"><button class="btn" type="submit">Assign batch</button></div>
+  </form>
+</div>
+
+{{ ui.shead("01", "Coverage") }}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Project</th><th>Track</th><th>Reviewers</th><th class="num">Done</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="/projects/{{ r.id }}"><strong>{{ r.title }}</strong></a><br><span class="small dim">{{ r.id }}</span></td>
+        <td class="small">{{ r.track_name or "—" }}</td>
+        <td>
+          <div class="cluster">
+          {% for a in r.reviews %}
+            <span class="tag {% if a.status == 'done' %}tag--teal{% else %}tag--warn{% endif %}" title="batch {{ a.batch }}">{{ a.judge_name }}
+              {% if a.status != "done" %}
+              <form method="post" action="/organize/{{ event.slug }}/assignments/{{ a.id }}/delete" class="inline-form">{{ ui.csrf() }}<button class="linkish" type="submit" aria-label="Remove assignment">×</button></form>
+              {% endif %}
+            </span>
+          {% else %}<span class="small pink">unassigned</span>{% endfor %}
+          </div>
+        </td>
+        <td class="num {% if r.reviews|length < event.review_target %}pink{% endif %}">{{ r.done }} / {{ r.reviews|length }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

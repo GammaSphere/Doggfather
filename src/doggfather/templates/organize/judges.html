@@ -1,0 +1,69 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Judges{% endblock %}
+{% block body %}
+<div class="grid grid--split">
+  <div>
+    {{ ui.shead("01", "Roster") }}
+    {% if roster %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Judge</th><th>Tracks</th><th class="num">Done</th><th>Last score</th><th></th></tr></thead>
+        <tbody>
+        {% for j in roster %}
+          <tr>
+            <td><strong>{{ j.name }}</strong><br><span class="small muted">{{ j.email }}</span>{% if not j.has_password %} <span class="tag tag--warn">not claimed</span>{% endif %}</td>
+            <td>
+              <details>
+                <summary class="small">{{ j.tracks|map(attribute="name")|join(", ") or "no tracks" }}</summary>
+                <form method="post" action="/organize/{{ event.slug }}/judges/{{ j.id }}/tracks" class="stack mt-1">
+                  {{ ui.csrf() }}
+                  {% set mine = j.tracks|map(attribute="id")|list %}
+                  {% for t in tracks %}<label class="check small"><input type="checkbox" name="tracks" value="{{ t.id }}" {% if t.id in mine %}checked{% endif %}> {{ t.name }}</label>{% endfor %}
+                  <button class="btn btn--sm" type="submit">Save tracks</button>
+                </form>
+              </details>
+            </td>
+            <td class="num">{{ j.done }} / {{ j.assigned }}</td>
+            <td class="small">{{ j.last_scored_at|ago if j.last_scored_at else "—" }}</td>
+            <td class="right">
+              {% if j.done == 0 %}
+              <form method="post" action="/organize/{{ event.slug }}/judges/{{ j.id }}/remove" class="inline-form" data-confirm="Remove {{ j.name }} and their pending assignments?">
+                {{ ui.csrf() }}<button class="linkish small" type="submit">remove</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {% call ui.empty("No judges yet", "Invite judges by email; they accept with one click.") %}{% endcall %}
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    <form method="post" action="/organize/{{ event.slug }}/judges/invite" class="card card--panel form">
+      {{ ui.csrf() }}
+      <div class="card__head"><h2 class="card__title">Invite a judge</h2></div>
+      {{ ui.field("email", "Email", "", type="email", required=True, errors=errors) }}
+      <fieldset>
+        <legend>Tracks they may see</legend>
+        <div class="stack">
+          {% for t in tracks %}<label class="check"><input type="checkbox" name="tracks" value="{{ t.id }}"> {{ t.name }}</label>{% else %}<span class="small muted">No tracks: they judge the whole event.</span>{% endfor %}
+        </div>
+        {% if errors.get("tracks") %}<span class="field__error">{{ errors.tracks }}</span>{% endif %}
+      </fieldset>
+      {{ ui.textarea("note", "Personal note (optional)", "", rows=3) }}
+      <div class="form__actions"><button class="btn btn--primary" type="submit">Send invite &gt;&gt;&gt;</button></div>
+      <p class="small muted mb-0">Judges only ever see projects in their tracks and only their own scores; the server enforces both.</p>
+    </form>
+    {% if invites %}
+    <section class="card">
+      <div class="card__head"><h2 class="card__title">Pending invites</h2><span class="kicker">{{ invites|length }}</span></div>
+      <ul class="arrows">{% for inv in invites %}<li>{{ inv.email }} <span class="dim">· expires {{ inv.expires_at|ago }}</span></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

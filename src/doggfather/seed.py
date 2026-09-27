@@ -22,7 +22,8 @@ from . import audit, auth, clock
 from .config import Settings
 from .db import fetch_value, transaction
 from .security import hash_password
-from .services import bundles
+from .services import assignment, bundles
+from .services.events import get_event
 
 DEMO_PASSWORD = "dogfood-demo-2026"
 
@@ -103,6 +104,12 @@ def seed(db: sqlite3.Connection, settings: Settings, fixtures: dict | None = Non
             overrides={"judging_close": clock.iso(clock.now() + JUDGING_WINDOW),
                        "tagline": fixtures["event"].get("tagline") or "The shared DOGFOOD fixture event"},
         )
+
+        # The fixtures carry unfinished review batches (8 projects with only two
+        # reviews). Top every project up to the review target with *pending*
+        # assignments so the progress dashboard shows real outstanding work.
+        topup = assignment.run_auto(db, None, get_event(db, report.event_id))
+        report.counts["pending_assignments"] = len(topup.created)
 
         if settings.demo:
             # One hash for every seeded account keeps boot fast; demo only.
