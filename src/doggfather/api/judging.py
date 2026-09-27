@@ -26,38 +26,49 @@ from ..services import results, scoring
 router = APIRouter(prefix="/api", tags=["judging"])
 
 
-def _scores_response(db, judge_id: str, event_id: str | None) -> dict[str, Any]:
+def _scores_response(db, judge_id: str, event_id: str | None, event_ids: list[str] | None) -> dict[str, Any]:
     row = db.execute("SELECT id, name FROM users WHERE id = ?", (judge_id,)).fetchone()
-    scores = scoring.scores_for_judge(db, judge_id, event_id)
+    scores = scoring.scores_for_judge(db, judge_id, event_id, event_ids=event_ids)
     return {"judge": {"id": row["id"], "name": row["name"]}, "count": len(scores), "scores": scores}
 
 
-def _authorize(db, actor: User | None, judge_ref: str | None, event_id: str | None) -> str:
+def _authorize(db, actor: User | None, judge_ref: str | None, event_id: str | None) -> tuple[str, list[str] | None]:
+    """Resolve whose scorecards may be read, and from which events.
+
+    A judge reads their own. An organizer reads a judge's cards only from
+    events that organizer runs *and* that judge serves; being an organizer
+    somewhere never unlocks another event's scores. Admins read everything.
+    """
     if actor is None:
         raise NotAuthenticated()
     if judge_ref is None or judge_ref in (actor.id, actor.email):
         if not policy.is_judge_anywhere(db, actor):
             raise Forbidden("Only judges have scorecards. Organizers can pass ?judge=<id>.", code="not_a_judge")
-        return actor.id
+        return actor.id, None
     judge_id = scoring.resolve_judge_id(db, judge_ref)
-    if judge_id is None or not policy.can_view_judge_scores(db, actor, judge_id, event_id):
-        if judge_id is None and actor.is_admin:
+    if judge_id is None:
+        if actor.is_admin:
             raise NotFound("No judge with that id.")
         raise Forbidden("Judges can only read their own scores.", code="peer_scores_forbidden")
-    return judge_id
+    if actor.is_admin:
+        return judge_id, None
+    shared = policy.events_organized_and_judged(db, actor, judge_id)
+    if not shared or (event_id is not None and event_id not in shared):
+        raise Forbidden("Judges can only read their own scores.", code="peer_scores_forbidden")
+    return judge_id, sorted(shared)
 
 
 @router.get("/judge/scores", summary="Read your own scorecards (or, for organizers, a judge's)")
 def my_scores(db: DB, user: CurrentUser, judge: str | None = Query(default=None, description="judge user id or email"),
               event: str | None = Query(default=None, description="limit to one event id")):
-    judge_id = _authorize(db, user, judge, event)
-    return _scores_response(db, judge_id, event)
+    judge_id, scope = _authorize(db, user, judge, event)
+    return _scores_response(db, judge_id, event, scope)
 
 
 @router.get("/judges/{judge_id}/scores", summary="Read one judge's scorecards")
 def judge_scores(db: DB, user: CurrentUser, judge_id: str, event: str | None = None):
-    resolved = _authorize(db, user, judge_id, event)
-    return _scores_response(db, resolved, event)
+    resolved, scope = _authorize(db, user, judge_id, event)
+    return _scores_response(db, resolved, event, scope)
 
 
 @router.get("/events/{event_id}/results", summary="Ranked results (organizers always; everyone after publication)")

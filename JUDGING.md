@@ -220,6 +220,9 @@ Enforced in the backend: `policy.py` holds the matrix, and judge queries carry
 
 - `GET /api/judges/<id>/scores` returns 403 for any other judge, including
   ids that do not exist, so judges cannot enumerate peers.
+- An organizer reads a judge's scorecards only from events that organizer
+  runs *and* that judge serves. Organizing one event never unlocks another
+  event's scores.
 - A judge can open or score a project only if it is in their queue and
   their tracks.
 - Results and community tallies return `403 results_hidden` until an

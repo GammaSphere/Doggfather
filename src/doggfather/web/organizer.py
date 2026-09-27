@@ -44,6 +44,7 @@ def index(request: Request, db: DB, user: RequiredUser):
     return render(request, "organize/index.html", {
         "items": items,
         "can_create": event_service.can_create_events(db, user),
+        "can_import": user.is_admin,
     })
 
 
@@ -81,8 +82,7 @@ def new_event_submit(request: Request, db: DB, user: RequiredUser, form: Form):
 
 @router.post("/import")
 def import_event(request: Request, db: DB, user: RequiredUser, form: Form):
-    if not event_service.can_create_events(db, user):
-        raise Forbidden("Ask an admin to make you an organizer first.")
+    policy.require_admin(user)  # imports seat existing accounts; operators only
     upload = form.get("bundle")
     try:
         data = json.loads(upload.file.read(20 * 1024 * 1024)) if hasattr(upload, "file") else None

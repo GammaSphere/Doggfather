@@ -689,8 +689,9 @@ def export_bundle(db: DB, user: RequiredUser, event_id: str):
 
 @router.post("/bundles", tags=["bundles"], status_code=201, summary="Import an event bundle (fixtures.json shape)")
 def import_bundle(db: DB, user: RequiredUser, data: dict[str, Any] = Body(...)):
-    if not event_service.can_create_events(db, user):
-        raise Forbidden("Only admins and organizers can import events.")
+    # Imports seat existing accounts (matched by email) as judges and team
+    # members, so they are a platform-operator action, not an organizer one.
+    policy.require_admin(user)
     report = bundles.import_bundle(db, data, actor=user)
     return {"event_id": report.event_id, "counts": report.counts, "warnings": report.warnings}
 

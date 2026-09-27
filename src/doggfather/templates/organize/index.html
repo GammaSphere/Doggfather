@@ -32,12 +32,12 @@
     {% else %}
       {% call ui.empty("Nothing to organize yet", "Events you organize appear here.") %}{% endcall %}
     {% endif %}
-    {% if can_create %}
+    {% if can_import %}
     <form method="post" action="/organize/import" enctype="multipart/form-data" class="card card--panel mt-3 form" style="max-width: 640px">
       {{ ui.csrf() }}
       <div class="card__head"><h2 class="card__title">Import an event</h2><span class="kicker">bundle / fixtures.json</span></div>
       <div class="field"><label for="f-bundle">Bundle file (.json)</label><input id="f-bundle" type="file" name="bundle" accept="application/json,.json" required></div>
-      <p class="small muted">Migrating from another platform? Any JSON in the fixtures.json shape works; ids are kept, people are matched by email.</p>
+      <p class="small muted">Admins only. Migrating from another platform? Any JSON in the fixtures.json shape works; ids are kept, people are matched by email.</p>
       <div class="form__actions"><button class="btn" type="submit">Import</button></div>
     </form>
     {% endif %}

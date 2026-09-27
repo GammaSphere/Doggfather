@@ -44,7 +44,7 @@ class GalleryQuery:
             track_ids=[t for t in dict.fromkeys(self.track_ids) if t][:40],
             tags=[t.lower() for t in dict.fromkeys(self.tags) if t][:12],
             sort=self.sort if self.sort in SORTS else "recent",
-            page=max(1, self.page),
+            page=max(1, min(self.page, 100_000)),
             per_page=min(96, max(1, self.per_page)),
         )
 

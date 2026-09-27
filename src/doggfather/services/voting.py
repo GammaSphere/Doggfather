@@ -120,15 +120,18 @@ def voter_for_device(db: sqlite3.Connection, settings: Settings, event: Event, d
     return get_voter(db, voter_id)  # type: ignore[return-value]
 
 
-def voter_for_verified_email(db: sqlite3.Connection, event: Event, email: str, ip_hash: str) -> Voter:
-    """A logged-in account whose address is already verified skips the code."""
-    normalized = normalize_voter_email(email)
-    row = fetch_one(db, "SELECT * FROM voters WHERE event_id = ? AND email = ?", (event.id, normalized))
+def voter_for_verified_email(db: sqlite3.Connection, event: Event, user: User, ip_hash: str) -> Voter:
+    """A logged-in account whose address is already verified skips the code.
+    The account id is kept on the voter so own-team checks can use it."""
+    normalized = normalize_voter_email(user.email)
+    row = fetch_one(db, "SELECT * FROM voters WHERE event_id = ? AND (email = ? OR user_id = ?)",
+                    (event.id, normalized, user.id))
     if row:
         return _voter(row)  # type: ignore[return-value]
     voter_id = new_id("vtr")
-    db.execute("INSERT INTO voters (id, event_id, kind, email, ip_hash, created_at, verified_at)"
-               " VALUES (?, ?, 'email', ?, ?, ?, ?)", (voter_id, event.id, normalized, ip_hash, clock.now_iso(), clock.now_iso()))
+    db.execute("INSERT INTO voters (id, event_id, kind, user_id, email, ip_hash, created_at, verified_at)"
+               " VALUES (?, ?, 'email', ?, ?, ?, ?, ?)",
+               (voter_id, event.id, user.id, normalized, ip_hash, clock.now_iso(), clock.now_iso()))
     return get_voter(db, voter_id)  # type: ignore[return-value]
 
 
@@ -152,16 +155,20 @@ def request_code(db: sqlite3.Connection, settings: Settings, event: Event, email
 def verify_code(db: sqlite3.Connection, event: Event, email: str, code: str, ip_hash: str) -> Voter:
     assert_open(event)
     normalized = normalize_voter_email(email)
+    row = fetch_one(db, "SELECT * FROM vote_codes WHERE event_id = ? AND email = ? AND used_at IS NULL"
+                        " ORDER BY id DESC LIMIT 1", (event.id, normalized))
+    if row is None or row["expires_at"] <= clock.now_iso() or row["attempts"] >= MAX_CODE_ATTEMPTS:
+        raise Forbidden("That code has expired. Request a new one.", code="code_expired")
+    expected = token_hash(f"{event.id}:{normalized}:{(code or '').strip()}")
+    if not hmac.compare_digest(expected, row["code_hash"]):
+        # Committed on its own (autocommit) so the failed guess still counts.
+        db.execute("UPDATE vote_codes SET attempts = attempts + 1 WHERE id = ?", (row["id"],))
+        raise ValidationFailed(fields={"code": "That code is not right."})
     with transaction(db):
-        row = fetch_one(db, "SELECT * FROM vote_codes WHERE event_id = ? AND email = ? AND used_at IS NULL"
-                            " ORDER BY id DESC LIMIT 1", (event.id, normalized))
-        if row is None or row["expires_at"] <= clock.now_iso() or row["attempts"] >= MAX_CODE_ATTEMPTS:
-            raise Forbidden("That code has expired. Request a new one.", code="code_expired")
-        expected = token_hash(f"{event.id}:{normalized}:{(code or '').strip()}")
-        if not hmac.compare_digest(expected, row["code_hash"]):
-            db.execute("UPDATE vote_codes SET attempts = attempts + 1 WHERE id = ?", (row["id"],))
-            raise ValidationFailed(fields={"code": "That code is not right."})
-        db.execute("UPDATE vote_codes SET used_at = ? WHERE id = ?", (clock.now_iso(), row["id"]))
+        claimed = db.execute("UPDATE vote_codes SET used_at = ? WHERE id = ? AND used_at IS NULL",
+                             (clock.now_iso(), row["id"]))
+        if claimed.rowcount != 1:
+            raise Forbidden("That code was already used.", code="code_expired")
         existing = fetch_one(db, "SELECT * FROM voters WHERE event_id = ? AND email = ?", (event.id, normalized))
         if existing:
             return _voter(existing)  # type: ignore[return-value]
@@ -195,22 +202,15 @@ def ballot_order(secret: str, seed_key: str, event_id: str, project_ids: list[st
 
 
 def own_project_ids(db: sqlite3.Connection, event: Event, voter: Voter | None) -> set[str]:
-    """Projects this voter may not vote for: their own team's."""
-    if voter is None:
+    """Projects this voter may not vote for: their own team's. Emails are
+    compared in normalized form on both sides, so aliases cannot slip through."""
+    if voter is None or not (voter.user_id or voter.email):
         return set()
-    clauses, params = [], []
-    if voter.user_id:
-        clauses.append("m.user_id = ?")
-        params.append(voter.user_id)
-    if voter.email:
-        clauses.append("LOWER(u.email) = ?")
-        params.append(voter.email)
-    if not clauses:
-        return set()
-    rows = fetch_all(db, "SELECT p.id FROM projects p JOIN team_members m ON m.team_id = p.team_id"
-                         f" JOIN users u ON u.id = m.user_id WHERE p.event_id = ? AND ({' OR '.join(clauses)})",
-                         (event.id, *params))
-    return {r["id"] for r in rows}
+    rows = fetch_all(db, "SELECT p.id, m.user_id, u.email FROM projects p JOIN team_members m ON m.team_id = p.team_id"
+                         " JOIN users u ON u.id = m.user_id WHERE p.event_id = ?", (event.id,))
+    return {r["id"] for r in rows
+            if (voter.user_id and r["user_id"] == voter.user_id)
+            or (voter.email and normalize_voter_email(r["email"]) == voter.email)}
 
 
 def current_ballot(db: sqlite3.Connection, voter: Voter | None) -> dict[str, int]:

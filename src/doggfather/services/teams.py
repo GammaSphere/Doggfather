@@ -140,8 +140,9 @@ def leave_team(db: sqlite3.Connection, actor: User, team_id: str) -> None:
     _assert_teams_open(event)
     with transaction(db):
         others = [m for m in members(db, team_id) if m["id"] != actor.id]
-        if not others and fetch_one(db, "SELECT 1 FROM projects WHERE team_id = ? AND status = 'submitted'", (team_id,)):
-            raise Conflict("You are the last member of a team with a submitted project. Withdraw it first.")
+        if not others and fetch_one(db, "SELECT 1 FROM projects WHERE team_id = ? AND status IN ('submitted', 'withdrawn')",
+                                    (team_id,)):
+            raise Conflict("You are the last member of a team whose project is on the record; the team cannot be dissolved.")
         was_captain = fetch_value(db, "SELECT role FROM team_members WHERE team_id = ? AND user_id = ?",
                                   (team_id, actor.id)) == "captain"
         _drop_member(db, event.id, team_id, actor.id)

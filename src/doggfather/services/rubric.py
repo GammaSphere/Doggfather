@@ -92,7 +92,10 @@ def update_rubric(db: sqlite3.Connection, actor: User, event: Event, rows: list[
     and new ones (without); ``delete`` marks removals. ``overrides`` maps
     (criterion_id, track_id) to a weight, or blank to inherit."""
     require_organizer(db, actor, event.id)
+    if event.results_published:
+        raise Conflict("Unpublish results before changing the rubric; published numbers must not move silently.")
     locked = scoring_started(db, event.id)
+    track_ids = {r["id"] for r in fetch_all(db, "SELECT id FROM tracks WHERE event_id = ?", (event.id,))}
     current = {c["id"]: c for c in list_criteria(db, event.id)}
     errors: dict[str, str] = {}
     changes: list[str] = []
@@ -152,7 +155,11 @@ def update_rubric(db: sqlite3.Connection, actor: User, event: Event, rows: list[
                 )
                 changes.append(f"added {label}")
 
+        own_criteria = {r["id"] for r in fetch_all(db, "SELECT id FROM criteria WHERE event_id = ?", (event.id,))}
         for (cid, track_id), raw in (overrides or {}).items():
+            if cid not in own_criteria or track_id not in track_ids:
+                errors[f"override.{cid}.{track_id}"] = "Overrides must use this event's criteria and tracks."
+                continue
             existing = fetch_value(db, "SELECT weight FROM criterion_track_weights WHERE criterion_id = ? AND track_id = ?",
                                    (cid, track_id))
             text = str(raw if raw is not None else "").strip()

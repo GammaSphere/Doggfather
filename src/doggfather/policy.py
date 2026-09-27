@@ -13,7 +13,9 @@ Role isolation matrix (enforced here, tested in tests/test_isolation.py):
     organizer        +           +            +             +           +
     admin            +           +            +             +           +
 
-"Aggregates" become public only when an organizer publishes results.
+Organizer rights cover the events they organize, never other events: a
+judge who serves two events is visible to each event's organizers only for
+that event. "Aggregates" become public only when an organizer publishes results.
 """
 
 from __future__ import annotations
@@ -109,15 +111,20 @@ def can_view_judge_scores(db: sqlite3.Connection, actor: User | None, judge_id: 
         return False
     if actor.id == judge_id or actor.is_admin:
         return True
-    if event_id is not None:
-        return is_organizer(db, actor, event_id)
-    row = fetch_one(
+    shared = events_organized_and_judged(db, actor, judge_id)
+    return event_id in shared if event_id is not None else bool(shared)
+
+
+def events_organized_and_judged(db: sqlite3.Connection, organizer: User, judge_id: str) -> set[str]:
+    """Events where ``organizer`` organizes and ``judge_id`` judges: the only
+    events whose scorecards an organizer may read for that judge."""
+    rows = fetch_all(
         db,
-        "SELECT 1 FROM event_members o JOIN event_members j ON j.event_id = o.event_id"
+        "SELECT o.event_id FROM event_members o JOIN event_members j ON j.event_id = o.event_id"
         " WHERE o.user_id = ? AND o.role = 'organizer' AND j.user_id = ? AND j.role = 'judge'",
-        (actor.id, judge_id),
+        (organizer.id, judge_id),
     )
-    return row is not None
+    return {row["event_id"] for row in rows}
 
 
 def organizer_event_ids(db: sqlite3.Connection, user: User) -> set[str]:

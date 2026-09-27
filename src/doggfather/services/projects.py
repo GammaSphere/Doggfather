@@ -86,6 +86,8 @@ def is_team_member(db: sqlite3.Connection, user: User | None, project: sqlite3.R
 def require_editor(db: sqlite3.Connection, user: User | None, project: sqlite3.Row) -> User:
     if user is None or not is_team_member(db, user, project):
         raise Forbidden("Only the project's team can change it.")
+    if project["status"] == "withdrawn":
+        raise Forbidden("The organizers withdrew this project; it can no longer be changed.", code="project_withdrawn")
     return user
 
 

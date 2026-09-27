@@ -8,9 +8,18 @@ from doggfather import db
 from doggfather.db import fetch_value
 from doggfather.services.bundles import export_bundle, import_bundle
 from tests.conftest import make_settings
-from tests.helpers import post_form
+from tests.helpers import login, post_form
 
 SLUG = "sample-hack-2026"
+def admin_client(app):
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app)
+    client.__enter__()
+    assert login(client, "admin@doggfather.local", "dogfood-demo-2026").status_code == 303
+    return client
+
+
 SECTIONS = ("tracks", "prizes", "questions", "criteria", "judges", "teams", "projects", "scores", "assignments")
 
 
@@ -44,7 +53,7 @@ def test_round_trip_into_a_fresh_portal_is_lossless(conn, tmp_path):
         assert again["event"][key] == original["event"][key], key
 
 
-def test_import_through_the_api_matches_people_by_email(as_role, conn):
+def test_import_through_the_api_matches_people_by_email(as_role, conn, seeded_app):
     bundle = as_role("organizer").get("/api/v1/events/evt_01/bundle").json()
     bundle["event"].update(id="evt_02", slug="sample-hack-2027", name="Sample Hack 2027")
     for section in ("tracks", "teams", "projects", "prizes", "questions"):
@@ -59,14 +68,14 @@ def test_import_through_the_api_matches_people_by_email(as_role, conn):
         card["project"] += "_b"
     users_before = fetch_value(conn, "SELECT COUNT(*) FROM users")
     # The fixture's participants are on teams in evt_01 only, so they may join evt_02 teams too.
-    response = as_role("organizer").post("/api/v1/bundles", json=bundle)
+    response = admin_client(seeded_app).post("/api/v1/bundles", json=bundle)
     assert response.status_code == 201, response.text
     assert response.json()["counts"]["projects"] == 41
     assert fetch_value(conn, "SELECT COUNT(*) FROM users") == users_before  # nobody duplicated
 
 
-def test_bad_bundles_leave_nothing_behind(as_role, conn):
-    org = as_role("organizer")
+def test_bad_bundles_leave_nothing_behind(conn, seeded_app):
+    org = admin_client(seeded_app)
     assert org.post("/api/v1/bundles", json={"projects": []}).status_code == 422
     broken = {"event": {"id": "evt_x", "name": "Broken", "submissions_close": "2026-01-01T00:00:00Z"},
               "teams": [], "projects": [{"id": "p", "team": "missing", "title": "Orphan"}]}
@@ -74,15 +83,16 @@ def test_bad_bundles_leave_nothing_behind(as_role, conn):
     assert fetch_value(conn, "SELECT COUNT(*) FROM events WHERE id = 'evt_x'") == 0
 
 
-def test_participants_cannot_import(as_role):
+def test_only_admins_import(as_role):
     assert as_role("participant").post("/api/v1/bundles", json={"event": {}}).status_code == 403
+    assert as_role("organizer").post("/api/v1/bundles", json={"event": {}}).status_code == 403
 
 
-def test_import_via_the_console_upload(as_role, conn):
+def test_import_via_the_console_upload(as_role, conn, seeded_app):
     bundle = as_role("organizer").get("/api/v1/events/evt_01/bundle").json()
     small = {"event": {**bundle["event"], "id": "evt_ui", "slug": "ui-import", "name": "UI Import"},
              "tracks": [{"id": "t_ui", "name": "Main"}]}
-    org = as_role("organizer")
+    org = admin_client(seeded_app)
     response = post_form(org, "/organize/import", token_from="/organize",
                          files={"bundle": ("event.json", json.dumps(small).encode(), "application/json")})
     assert response.headers["location"] == "/organize/ui-import"

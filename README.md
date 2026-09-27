@@ -109,7 +109,7 @@ password" (the mail lands in the outbox, or in real inboxes with SMTP set).
 | Certificates (participation, awards), printable | `services/records.py` | `test_records.py` |
 | **Signed, publicly verifiable judge records** (Ed25519 plus a score commitment), offline verifier | `signing.py`, `tools/verify_record.py` | `test_records.py` |
 | Embeddable gallery widget (`embed.js` or iframe) | `web/embed.py` | `test_bundles.py` |
-| Bulk import and export (bundle format, lossless round trip; also CLI) | `services/bundles.py` | `test_bundles.py` |
+| Bulk import (admins) and export (bundle format, lossless round trip; also CLI) | `services/bundles.py` | `test_bundles.py` |
 
 ### Bonus challenges
 - **Normalization proof**: [JUDGING.md](JUDGING.md) plus the generated

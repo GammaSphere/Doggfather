@@ -39,7 +39,10 @@ def rubric_page(request: Request, db: DB, user: RequiredUser, slug: str):
 def rubric_submit(request: Request, db: DB, user: RequiredUser, slug: str, form: Form):
     event = organizer_event(db, user, slug)
     rows, overrides = [], {}
-    count = int(str(form.get("rows") or "0"))
+    try:
+        count = min(int(str(form.get("rows") or "0")), 100)
+    except ValueError:
+        return redirect(request, f"/organize/{slug}/rubric", "That form was malformed; reload and try again.", "error")
     for i in range(count):
         rows.append({
             "id": str(form.get(f"c{i}_id") or "") or None,
@@ -129,9 +132,11 @@ def assignments_page(request: Request, db: DB, user: RequiredUser, slug: str):
 @router.post("/{slug}/assignments/auto")
 def auto(request: Request, db: DB, user: RequiredUser, slug: str, form: Form):
     event = organizer_event(db, user, slug)
-    target = int(str(form.get("target") or event.review_target))
     try:
+        target = int(str(form.get("target") or event.review_target))
         plan = assignment.run_auto(db, user, event, target)
+    except ValueError:
+        return redirect(request, f"/organize/{slug}/assignments", "Reviews per project must be a whole number.", "error")
     except AppError as exc:
         return redirect(request, f"/organize/{slug}/assignments", exc.message, "error")
     note = f" {len(plan.shortfall)} projects lack eligible judges." if plan.shortfall else ""

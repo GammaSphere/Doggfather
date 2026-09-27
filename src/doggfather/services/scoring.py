@@ -131,13 +131,20 @@ def save_score(db: sqlite3.Connection, judge: User, project_id: str, values: dic
     return score_id
 
 
-def scores_for_judge(db: sqlite3.Connection, judge_id: str, event_id: str | None = None) -> list[dict[str, Any]]:
-    """One judge's filed scorecards. The judge id is part of the query."""
+def scores_for_judge(db: sqlite3.Connection, judge_id: str, event_id: str | None = None, *,
+                     event_ids: list[str] | None = None) -> list[dict[str, Any]]:
+    """One judge's filed scorecards. The judge id is part of the query, and
+    ``event_ids`` (when given) limits which events' cards come back."""
     params: list[Any] = [judge_id]
     scope = ""
     if event_id:
         scope = " AND s.event_id = ?"
         params.append(event_id)
+    if event_ids is not None:
+        if not event_ids:
+            return []
+        scope += f" AND s.event_id IN ({placeholders(event_ids)})"
+        params.extend(event_ids)
     rows = fetch_all(
         db,
         "SELECT s.id, s.event_id, s.project_id, s.comment, s.submitted_at, s.updated_at, p.title, p.track_id"

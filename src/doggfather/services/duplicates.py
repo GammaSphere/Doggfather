@@ -25,7 +25,7 @@ from itertools import combinations
 from .. import audit, clock, policy
 from ..auth import User
 from ..db import fetch_all, fetch_one, transaction
-from ..errors import NotFound
+from ..errors import Conflict, NotFound
 from .events import Event
 
 MIN_DESCRIPTION = 80
@@ -147,6 +147,8 @@ def withdraw(db: sqlite3.Connection, actor: User, event: Event, project_id: str,
     """Organizer removes an entry (duplicate, ineligible). It leaves the
     gallery and the results but stays in the database and the audit log."""
     policy.require_organizer(db, actor, event.id)
+    if event.results_published:
+        raise Conflict("Unpublish results before withdrawing an entry; published rankings must not move silently.")
     row = fetch_one(db, "SELECT title FROM projects WHERE id = ? AND event_id = ?", (project_id, event.id))
     if row is None:
         raise NotFound("No such project.")

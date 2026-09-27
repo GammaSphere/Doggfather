@@ -56,7 +56,7 @@ def resolve_voter(request: Request, db, settings: Settings, event, user, *, crea
         if voter is None and user is not None:
             verified = db.execute("SELECT email_verified_at FROM users WHERE id = ?", (user.id,)).fetchone()
             if verified and verified[0]:
-                voter = voting.voter_for_verified_email(db, event, user.email, ip_hash)
+                voter = voting.voter_for_verified_email(db, event, user, ip_hash)
         return voter
     device = request.cookies.get(DEVICE_COOKIE)
     if device and create:

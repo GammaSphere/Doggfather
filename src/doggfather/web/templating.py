@@ -123,7 +123,6 @@ def build_environment(settings: Settings) -> Environment:
         num=fmt_number,
         paras=paragraphs,
         initials=initials,
-        tojson_compact=lambda v: Markup(json.dumps(v, separators=(",", ":"))),
         zip=lambda a, b: zip(a, b),
         safe_url=safe_url,
     )

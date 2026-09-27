@@ -71,6 +71,13 @@ def _link(value: Any, where: str, report: "ImportReport") -> str:
     return text[:500]
 
 
+def _number(value: Any, where: str, kind=int) -> Any:
+    try:
+        return kind(value)
+    except (TypeError, ValueError):
+        raise ValidationFailed(f"{where} must be a number, not {value!r}.", fields={where: "not a number"}) from None
+
+
 def _require(data: dict, key: str, where: str) -> Any:
     if key not in data or data[key] in (None, ""):
         raise ValidationFailed(f"Bundle is missing {where}.{key}.", fields={f"{where}.{key}": "required"})
@@ -97,6 +104,16 @@ def import_bundle(db: sqlite3.Connection, data: dict[str, Any], *, actor: User |
     judging_close = _ts(ev.get("judging_close") or clock.iso(close_dt + timedelta(days=10)), "event.judging_close")
 
     report = ImportReport(event_id=event_id)
+    try:
+        _import(db, data, ev, event_id, name, close, opens, judging_close, report, actor)
+    except sqlite3.IntegrityError as exc:
+        raise Conflict(f"The bundle collides with existing records or breaks a rule: {exc}.",
+                       code="bundle_conflict") from None
+    return report
+
+
+def _import(db: sqlite3.Connection, data: dict[str, Any], ev: dict[str, Any], event_id: str, name: str, close: str,
+            opens: str, judging_close: str, report: "ImportReport", actor: User | None) -> None:
     counts = report.counts
     now = clock.now_iso()
 
@@ -110,12 +127,13 @@ def import_bundle(db: sqlite3.Connection, data: dict[str, Any], *, actor: User |
             " voting_open_at, voting_close_at, vote_credits, created_by, created_at, updated_at)"
             " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (event_id, slug, name, ev.get("tagline", ""), ev.get("description", ""), opens, close, judging_close,
-             int(ev.get("max_team_size", 4)), int(ev.get("review_target", 3)), ev.get("normalization", "bias"),
+             _number(ev.get("max_team_size", 4), "event.max_team_size"),
+             _number(ev.get("review_target", 3), "event.review_target"), ev.get("normalization", "bias"),
              _ts(ev["results_published_at"], "event.results_published_at") if ev.get("results_published_at") else None,
              ev.get("voting_mode", "off"),
              _ts(ev["voting_open"], "event.voting_open") if ev.get("voting_open") else None,
              _ts(ev["voting_close"], "event.voting_close") if ev.get("voting_close") else None,
-             int(ev.get("vote_credits", 25)), actor.id if actor else None, now, now),
+             _number(ev.get("vote_credits", 25), "event.vote_credits"), actor.id if actor else None, now, now),
         )
         if actor is not None:
             db.execute("INSERT OR IGNORE INTO event_members VALUES (?, ?, 'organizer', ?)", (event_id, actor.id, now))
@@ -162,12 +180,14 @@ def import_bundle(db: sqlite3.Connection, data: dict[str, Any], *, actor: User |
                 "INSERT INTO criteria (id, event_id, key, label, description, weight, min_score, max_score, position)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (cid, event_id, key, c.get("label") or key.capitalize(), c.get("description", ""),
-                 float(c.get("weight", 1)), int(c.get("min", 1)), int(c.get("max", 5)), pos),
+                 _number(c.get("weight", 1), f"criteria[{key}].weight", float), _number(c.get("min", 1), f"criteria[{key}].min"),
+                 _number(c.get("max", 5), f"criteria[{key}].max"), pos),
             )
             criterion_ids[key] = cid
             for track_id, weight in (c.get("track_weights") or {}).items():
                 if track_id in track_ids:
-                    db.execute("INSERT INTO criterion_track_weights VALUES (?, ?, ?)", (cid, track_id, float(weight)))
+                    db.execute("INSERT INTO criterion_track_weights VALUES (?, ?, ?)",
+                               (cid, track_id, _number(weight, f"criteria[{key}].track_weights", float)))
         counts["criteria"] = len(criterion_ids)
 
         # ---- organizers listed in the bundle

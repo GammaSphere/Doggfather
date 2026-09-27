@@ -93,7 +93,7 @@ that every write path calls.
 | Table | Purpose | Notes |
 |---|---|---|
 | `criteria` | Rubric | `UNIQUE (event_id, key)`, `CHECK (min < max)`, `weight ≥ 0`. |
-| `criterion_track_weights` | Per-track weight overrides | Absent row = inherit the event weight. |
+| `criterion_track_weights` | Per-track weight overrides | Absent row = inherit the event weight. Triggers require the criterion and the track to belong to the same event. |
 | `judge_tracks` | What a judge may see | The isolation joins go through this table. |
 | `assignments` | Judge × project | `UNIQUE (judge_id, project_id)`, a `batch` label, status pending or done. |
 | `scores` | One scorecard | `UNIQUE (assignment_id)` and `UNIQUE (judge_id, project_id)`. |
@@ -163,7 +163,8 @@ How the fixture file maps:
 | `projects[].summary` | `tagline` and, when there is no description, `description` |
 | `scores[]` | a completed `assignment` (batch "imported") + `scores` + `score_items`; the rubric is derived from the criteria keys when the bundle has no `criteria` |
 
-Import runs in **one transaction**: a malformed bundle (missing event, a
+Import is an **admin** action, because it seats existing accounts (matched by
+email) as judges and team members. It runs in **one transaction**: a malformed bundle (missing event, a
 project for an unknown team, a score on an undefined criterion) leaves
 nothing behind. People are matched by email, so importing a second event
 reuses existing accounts. Non-http links are dropped with a warning.
@@ -172,7 +173,7 @@ reuses existing accounts. Non-http links are dropped with a warning.
 
 | Direction | Web | API | CLI |
 |---|---|---|---|
-| Import a bundle | Organize → "Import an event" (upload) | `POST /api/v1/bundles` | `python -m doggfather import bundle.json` |
+| Import a bundle (admins) | Organize → "Import an event" (upload) | `POST /api/v1/bundles` | `python -m doggfather import bundle.json` |
 | Export a bundle | Organizer → Exports → "Download bundle" | `GET /api/v1/events/{id}/bundle` | `python -m doggfather export evt_01 out.json` |
 | CSV (7 kinds) | Organizer → Exports | `GET /api/events/{id}/export/{kind}.csv` | via the API |
 

@@ -34,7 +34,8 @@ FROM runtime AS test
 USER root
 COPY --from=build /wheels-dev /wheels-dev
 RUN pip install --no-cache-dir --no-index --find-links /wheels-dev pytest httpx2 && rm -rf /wheels-dev
-COPY pyproject.toml run.py ./
+COPY pyproject.toml run.py .dogfood.toml ./
+COPY docs ./docs
 COPY tests ./tests
 USER dogfood
-CMD ["python", "-m", "pytest", "-q"]
+CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
