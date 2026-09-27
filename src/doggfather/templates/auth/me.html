@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ USER / {{ user.id }} ]</p>
+        <h1 class="display display--lg">Hey, <span class="accent">{{ user.first_name }}</span></h1>
+      </div>
+      <p class="lead">{{ user.email }}{% if user.is_admin %} · platform admin{% endif %}</p>
+    </div>
+
+    {{ ui.shead("01", "Your events") }}
+    {% if memberships %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Event</th><th>Role</th><th>Submissions close</th><th></th></tr></thead>
+        <tbody>
+        {% for m in memberships %}
+          <tr>
+            <td><a href="/events/{{ m.slug }}"><strong>{{ m.name }}</strong></a></td>
+            <td>{{ ui.status(m.role, "pink" if m.role == "organizer" else ("open" if m.role == "judge" else "muted")) }}</td>
+            <td>{{ ui.time(m.submissions_close_at) }}</td>
+            <td class="right nowrap">
+              {% if m.role == "organizer" %}<a href="/organize/{{ m.slug }}">Organize &gt;&gt;&gt;</a>
+              {% elif m.role == "judge" %}<a href="/judge/{{ m.slug }}">Judging queue &gt;&gt;&gt;</a>
+              {% else %}<a href="/events/{{ m.slug }}/team">Your team &gt;&gt;&gt;</a>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {% call ui.empty("No events yet", "Join an event to form a team and submit a project.") %}
+        <a class="btn btn--primary" href="/events">Find an event &gt;&gt;&gt;</a>
+      {% endcall %}
+    {% endif %}
+
+    <div class="mt-4">{{ ui.shead("02", "Account") }}</div>
+    <div class="grid grid--2">
+      <div class="card">
+        <div class="card__head"><h2 class="card__title">Sessions</h2>{{ ui.status(session_count ~ " active", "open") }}</div>
+        <p class="small muted">Lost a laptop? Sign out everywhere except this browser.</p>
+        <form method="post" action="/me/logout-others" data-confirm="Sign out every other session?">
+          {{ ui.csrf() }}
+          <button class="btn btn--danger" type="submit">Sign out other sessions</button>
+        </form>
+      </div>
+      {% block account_extra %}{% endblock %}
+    </div>
+  </div>
+</section>
+{% endblock %}

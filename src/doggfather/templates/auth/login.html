@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="grid grid--split grid--split-rev">
+      <div>
+        <p class="label-term mb-1">[ AUTH / 01 ]</p>
+        <h1 class="display display--lg">Log <span class="accent">in</span></h1>
+        <p class="lead mt-2">Participants, judges and organizers share one account. Your roles come from the events you are part of.</p>
+        {% if demo_accounts %}
+        <div class="card card--teal mt-3">
+          <div class="card__head">
+            <h2 class="card__title">Demo accounts</h2>
+            {{ ui.status("Demo mode", "open") }}
+          </div>
+          <p class="small muted mb-1">Seeded from fixtures.json. Password for every account: <code>{{ demo_accounts[0].password }}</code></p>
+          <div class="table-wrap">
+            <table class="table table--dense">
+              <thead><tr><th>Role</th><th>Email</th></tr></thead>
+              <tbody>
+              {% for a in demo_accounts %}
+                <tr><td class="nowrap">{{ a.role }}</td><td><code>{{ a.email }}</code></td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card card--panel">
+        <form method="post" action="/login" class="form" novalidate>
+          {{ ui.csrf() }}
+          <input type="hidden" name="next" value="{{ next }}">
+          {% if error %}<div class="flash flash--error">{{ error }}</div>{% endif %}
+          {{ ui.field("email", "Email", email, type="email", required=True, attrs='autocomplete="email" autofocus') }}
+          {{ ui.field("password", "Password", "", type="password", required=True, attrs='autocomplete="current-password"') }}
+          <div class="form__actions">
+            <button class="btn btn--primary btn--lg" type="submit">Log in &gt;&gt;&gt;</button>
+            <a href="/forgot" class="small">Forgot or never set a password?</a>
+          </div>
+          <p class="small muted mb-0">New here? <a href="/register?next={{ next|urlencode }}">Create an account</a>.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

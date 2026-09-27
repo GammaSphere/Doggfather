@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager, closing
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -15,8 +15,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import __version__, db
 from .config import Settings, load_settings
+from .csrf import csrf_protect
 from .errors import AppError
 from .middleware import RequestContextMiddleware
+from .ratelimit import RateLimiter
+from .web import auth as auth_pages
 from .web import public, system
 from .web.templating import build_environment, render
 
@@ -108,9 +111,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url=None,
         openapi_url="/api/openapi.json",
         lifespan=lifespan,
+        dependencies=[Depends(csrf_protect)],
     )
     app.state.settings = settings
     app.state.templates = build_environment(settings)
+    app.state.limiter = RateLimiter()
 
     app.add_middleware(RequestContextMiddleware)
     app.add_exception_handler(AppError, handle_app_error)
@@ -121,4 +126,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
     app.include_router(system.router)
     app.include_router(public.router)
+    app.include_router(auth_pages.router)
     return app

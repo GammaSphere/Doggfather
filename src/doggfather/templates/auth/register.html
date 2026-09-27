@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Create an account{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="grid grid--split grid--split-rev">
+      <div>
+        <p class="label-term mb-1">[ AUTH / 02 ]</p>
+        <h1 class="display display--lg">Join <span class="accent">up</span></h1>
+        <p class="lead mt-2">One account for every event. Form a team, submit a project, vote, comment.</p>
+        <ul class="arrows mt-3">
+          <li>Your password is hashed with scrypt; we never store it.</li>
+          <li>Sessions are server-side and can be revoked from your dashboard.</li>
+          <li>If an organizer already added you (as a judge or team member), use “forgot password” to claim that account instead.</li>
+        </ul>
+      </div>
+      <div class="card card--panel">
+        <form method="post" action="/register" class="form" novalidate>
+          {{ ui.csrf() }}
+          <input type="hidden" name="next" value="{{ next }}">
+          {{ ui.field("name", "Display name", values.name, required=True, errors=errors, attrs='autocomplete="name" maxlength="80"') }}
+          {{ ui.field("email", "Email", values.email, type="email", required=True, errors=errors, attrs='autocomplete="email"') }}
+          {{ ui.field("password", "Password", "", type="password", required=True, errors=errors, help="At least 10 characters.", attrs='autocomplete="new-password" minlength="10"') }}
+          <div class="form__actions">
+            <button class="btn btn--primary btn--lg" type="submit">Create account &gt;&gt;&gt;</button>
+            <a href="/login?next={{ next|urlencode }}" class="small">I already have one</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

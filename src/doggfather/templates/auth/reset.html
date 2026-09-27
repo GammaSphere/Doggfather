@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Choose a password{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--narrow">
+    <p class="label-term mb-1">[ AUTH / 04 ]</p>
+    <h1 class="display display--lg">New <span class="accent">password</span></h1>
+    {% if not valid %}
+      <p class="lead mt-2">This link has expired or was already used.</p>
+      <div class="btn-row mt-3"><a class="btn btn--primary" href="/forgot">Request a new link &gt;&gt;&gt;</a></div>
+    {% else %}
+      <div class="card card--panel mt-3">
+        <form method="post" action="/reset/{{ token }}" class="form">
+          {{ ui.csrf() }}
+          {{ ui.field("password", "New password", "", type="password", required=True, errors=errors, help="At least 10 characters. Every existing session will be signed out.", attrs='autocomplete="new-password" minlength="10" autofocus') }}
+          <div class="form__actions"><button class="btn btn--primary" type="submit">Save password &gt;&gt;&gt;</button></div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Reset password{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--narrow">
+    <p class="label-term mb-1">[ AUTH / 03 ]</p>
+    <h1 class="display display--lg">Reset <span class="accent">password</span></h1>
+    {% if sent %}
+      <p class="lead mt-2">If an account exists for that address, a reset link is on its way.</p>
+      <p class="prose mt-2">This portal runs offline, so mail lands in the local outbox. {% if demo %}In demo mode an admin can read it under <a href="/admin/outbox">Admin → Outbox</a>.{% endif %}</p>
+    {% else %}
+      <p class="lead mt-2">Also the way to claim an account an organizer created for you as a judge or team member.</p>
+      <div class="card card--panel mt-3">
+        <form method="post" action="/forgot" class="form">
+          {{ ui.csrf() }}
+          {{ ui.field("email", "Email", "", type="email", required=True, attrs='autocomplete="email" autofocus') }}
+          <div class="form__actions"><button class="btn btn--primary" type="submit">Send reset link &gt;&gt;&gt;</button></div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
