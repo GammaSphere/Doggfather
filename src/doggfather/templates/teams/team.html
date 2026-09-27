@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Team · {{ event.name }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/events/{{ event.slug }}">{{ event.name }}</a><span>Team</span></nav>
+    {% if team %}
+      <div class="page-head">
+        <div>
+          <p class="label-term mb-1">[ TEAM / {{ team.id|upper }} ]</p>
+          <h1 class="display display--lg">{{ team.name }}</h1>
+        </div>
+        <div class="cluster">
+          {{ ui.phase_status(event) }}
+          {% if event.submissions_open() %}<span class="small muted">Deadline in <span class="pink" data-countdown="{{ event.submissions_close_at }}">{{ event.submissions_close_at|ago }}</span></span>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid--split">
+        <div class="stack">
+          <section class="card card--pink">
+            <div class="card__head"><h2 class="card__title">Project</h2>
+              {% if project %}{{ ui.status(project.status, "ok" if project.status == "submitted" else "warn") }}{% endif %}
+            </div>
+            {% if project %}
+              <p class="mb-1"><a href="/projects/{{ project.id }}"><strong>{{ project.title }}</strong></a></p>
+              <p class="small muted">Last saved {{ project.updated_at|ago }}{% if project.submitted_at %} · submitted {{ project.submitted_at|dt }}{% endif %}</p>
+              <div class="btn-row mt-2">
+                {% if event.submissions_open() %}<a class="btn btn--primary" href="/projects/{{ project.id }}/edit">Edit submission &gt;&gt;&gt;</a>{% endif %}
+                <a class="btn" href="/projects/{{ project.id }}">View</a>
+              </div>
+            {% elif event.submissions_open() %}
+              <p class="small muted">No draft yet. Start one now; you can edit it until the deadline.</p>
+              <a class="btn btn--primary mt-1" href="/projects/new?event={{ event.slug }}">Start a submission &gt;&gt;&gt;</a>
+            {% else %}
+              <p class="small muted">Submissions are closed and this team has no project.</p>
+            {% endif %}
+          </section>
+
+          <section class="card">
+            <div class="card__head"><h2 class="card__title">Members</h2><span class="kicker">{{ members|length }} / {{ event.max_team_size }}</span></div>
+            <div class="table-wrap">
+              <table class="table">
+                <tbody>
+                {% for m in members %}
+                  <tr>
+                    <td><strong>{{ m.name }}</strong><br><span class="small muted">{{ m.email }}</span></td>
+                    <td>{{ ui.status(m.role, "pink" if m.role == "captain" else "muted") }}</td>
+                    <td class="right">
+                      {% if team.my_role == "captain" and m.id != user.id and event.submissions_open() %}
+                      <form method="post" action="/teams/{{ team.id }}/members/{{ m.id }}/remove" class="inline-form" data-confirm="Remove {{ m.name }}?">
+                        {{ ui.csrf() }}<button class="linkish small" type="submit">remove</button>
+                      </form>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section class="card card--teal">
+            <div class="card__head"><h2 class="card__title">Invite link</h2><span class="kicker">share privately</span></div>
+            {% if event.submissions_open() %}
+              <div class="copy-row">
+                <input id="invite-url" value="{{ invite_url }}" readonly aria-label="Invite link">
+                <button class="btn btn--teal" type="button" data-copy="#invite-url">Copy</button>
+              </div>
+              <p class="small muted mt-1">Anyone with this link can join until the team is full or the deadline passes.</p>
+              {% if team.my_role == "captain" %}
+              <form method="post" action="/teams/{{ team.id }}/invite" data-confirm="The current link will stop working. Continue?">
+                {{ ui.csrf() }}<button class="btn btn--sm" type="submit">New link</button>
+              </form>
+              {% endif %}
+            {% else %}
+              <p class="small muted">Teams locked when submissions closed.</p>
+            {% endif %}
+          </section>
+          {% if event.submissions_open() %}
+          <section class="card">
+            {% if team.my_role == "captain" %}
+            <form method="post" action="/teams/{{ team.id }}/rename" class="form">
+              {{ ui.csrf() }}
+              {{ ui.field("team_name", "Rename team", team.name, errors=errors) }}
+              <div class="form__actions"><button class="btn btn--sm" type="submit">Rename</button></div>
+            </form>
+            <hr>
+            {% endif %}
+            <form method="post" action="/teams/{{ team.id }}/leave" data-confirm="Leave {{ team.name }}?">
+              {{ ui.csrf() }}<button class="btn btn--danger btn--sm" type="submit">Leave team</button>
+            </form>
+          </section>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="page-head">
+        <div>
+          <p class="label-term mb-1">[ TEAM / NONE ]</p>
+          <h1 class="display display--lg">Form a <span class="accent">team</span></h1>
+        </div>
+        <p class="lead">Solo is fine: a team of one. Up to {{ event.max_team_size }} people per team.</p>
+      </div>
+      {% if event.submissions_open() %}
+      <div class="grid grid--2">
+        <form method="post" action="/events/{{ event.slug }}/team" class="card card--panel form">
+          {{ ui.csrf() }}
+          <div class="card__head"><h2 class="card__title">Start a team</h2></div>
+          {{ ui.field("team_name", "Team name", "", required=True, errors=errors, attrs='maxlength="60"') }}
+          <div class="form__actions"><button class="btn btn--primary" type="submit">Create team &gt;&gt;&gt;</button></div>
+        </form>
+        <div class="card">
+          <div class="card__head"><h2 class="card__title">Joining a team?</h2></div>
+          <p class="small muted">Ask your captain for the invite link and open it while logged in. Links look like <code>{{ base_url }}/join/…</code></p>
+        </div>
+      </div>
+      {% else %}
+        {% call ui.empty("Teams are locked", "Submissions for this event closed " ~ (event.submissions_close_at|dt) ~ ".") %}{% endcall %}
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

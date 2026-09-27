@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Join {{ team.name }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <p class="label-term mb-1">[ INVITE / {{ event.name|upper }} ]</p>
+    <h1 class="display display--lg">Join <span class="accent">{{ team.name }}</span></h1>
+    <p class="lead mt-2">{{ members|length }} of {{ event.max_team_size }} seats taken. Captain: {{ (members|selectattr("role", "equalto", "captain")|first).name if members else "none" }}.</p>
+    <div class="card card--panel mt-3">
+      {% if current and current.id == team.id %}
+        <p>You are already on this team.</p>
+        <a class="btn btn--primary" href="/events/{{ event.slug }}/team">Go to team &gt;&gt;&gt;</a>
+      {% elif current %}
+        <p>You are on <strong>{{ current.name }}</strong> for this event. Leave it before joining another team.</p>
+        <a class="btn" href="/events/{{ event.slug }}/team">Your current team</a>
+      {% elif not event.submissions_open() %}
+        <p>This event's teams are locked: submissions closed {{ event.submissions_close_at|dt }}.</p>
+      {% else %}
+        <form method="post" action="/join/{{ code }}">
+          {{ ui.csrf() }}
+          <button class="btn btn--primary btn--lg" type="submit">Join as {{ user.name }} &gt;&gt;&gt;</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

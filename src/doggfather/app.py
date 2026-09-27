@@ -21,7 +21,7 @@ from .middleware import RequestContextMiddleware
 from .ratelimit import RateLimiter
 from .web import auth as auth_pages
 from .web import events as event_pages
-from .web import organizer, public, system
+from .web import organizer, public, system, teams
 from .web.templating import build_environment, render
 
 PACKAGE_DIR = Path(__file__).parent
@@ -130,4 +130,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_pages.router)
     app.include_router(event_pages.router)
     app.include_router(organizer.router)
+    app.include_router(teams.router)
     return app
