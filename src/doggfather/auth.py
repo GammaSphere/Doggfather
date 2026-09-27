@@ -102,6 +102,8 @@ def ensure_user(db: sqlite3.Connection, email: str, name: str, *, user_id: str |
     if existing:
         return existing
     uid = user_id or new_id("usr")
+    if user_id and fetch_one(db, "SELECT 1 FROM users WHERE id = ?", (user_id,)):
+        uid = new_id("usr")  # id taken by a different person; keep the email as the identity
     now = clock.now_iso()
     db.execute(
         "INSERT INTO users (id, email, name, password_hash, email_verified_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
