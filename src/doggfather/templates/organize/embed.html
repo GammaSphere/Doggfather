@@ -1,0 +1,21 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Embed{% endblock %}
+{% block body %}
+<p class="lead mb-3">Put the live gallery on your event site, a sponsor page or a blog. It shows public projects only and updates itself.</p>
+<div class="grid grid--2 mb-3">
+  <div class="card card--panel">
+    <div class="card__head"><h2 class="card__title">Script (auto height)</h2><span class="kicker">recommended</span></div>
+    <textarea id="snippet-js" class="input" rows="3" readonly>&lt;div data-doggfather-gallery="{{ event.slug }}" data-limit="12"&gt;&lt;/div&gt;
+&lt;script src="{{ base_url }}/embed.js" async&gt;&lt;/script&gt;</textarea>
+    <div class="btn-row mt-1"><button class="btn btn--sm btn--teal" type="button" data-copy="#snippet-js">Copy</button></div>
+    <p class="small muted mb-0">Optional: <code>data-track="trk_…"</code> to show one track.</p>
+  </div>
+  <div class="card">
+    <div class="card__head"><h2 class="card__title">Plain iframe</h2></div>
+    <textarea id="snippet-iframe" class="input" rows="3" readonly>&lt;iframe src="{{ base_url }}/embed/events/{{ event.slug }}?limit=12" style="width:100%;height:900px;border:0" title="{{ event.name }} gallery"&gt;&lt;/iframe&gt;</textarea>
+    <div class="btn-row mt-1"><button class="btn btn--sm" type="button" data-copy="#snippet-iframe">Copy</button></div>
+  </div>
+</div>
+{{ ui.shead("01", "Preview") }}
+<iframe src="/embed/events/{{ event.slug }}?limit=6" title="Embed preview" style="width:100%; height:720px; border:1px solid var(--line); background: var(--bg)"></iframe>
+{% endblock %}

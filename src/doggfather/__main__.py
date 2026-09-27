@@ -70,6 +70,19 @@ def cmd_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_export(args: argparse.Namespace) -> int:
+    from .services.bundles import export_bundle
+
+    settings = load_settings()
+    with closing(_open(settings)) as conn:
+        text = json.dumps(export_bundle(conn, args.event_id), indent=2, ensure_ascii=False)
+    if args.output:
+        Path(args.output).write_text(text + "\n", encoding="utf-8")
+    else:
+        print(text)
+    return 0
+
+
 def cmd_openapi(args: argparse.Namespace) -> int:
     """Print the OpenAPI document (committed as docs/openapi.json)."""
     import tempfile
@@ -101,6 +114,11 @@ def build_parser() -> argparse.ArgumentParser:
     imp = sub.add_parser("import", help="import an event bundle (fixtures.json shape)")
     imp.add_argument("bundle")
     imp.set_defaults(func=cmd_import)
+
+    exp = sub.add_parser("export", help="export an event as a bundle")
+    exp.add_argument("event_id")
+    exp.add_argument("output", nargs="?")
+    exp.set_defaults(func=cmd_export)
 
     openapi = sub.add_parser("openapi", help="print the OpenAPI document")
     openapi.set_defaults(func=cmd_openapi)

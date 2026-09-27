@@ -22,7 +22,7 @@ from typing import Any
 from .. import audit, clock
 from ..auth import User, ensure_user
 from ..db import fetch_one, new_id, transaction
-from ..errors import Conflict, ValidationFailed
+from ..errors import Conflict, NotFound, ValidationFailed
 from ..security import new_token
 
 SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -280,3 +280,88 @@ def import_bundle(db: sqlite3.Connection, data: dict[str, Any], *, actor: User |
         audit.record(db, "import.bundle", actor=actor, event_id=event_id, target_type="event", target_id=event_id,
                      detail={"summary": report.summary()})
     return report
+
+
+# ------------------------------------------------------------------ export
+
+def export_bundle(db: sqlite3.Connection, event_id: str) -> dict[str, Any]:
+    """The whole event as a bundle that ``import_bundle`` accepts.
+
+    A superset of the fixture shape: everything needed to rebuild the event
+    on another Doggfather (or anything else). Deliberately excluded: password
+    hashes, sessions, API tokens, voter identities and comments; they belong to
+    people, not to the event archive.
+    """
+    event = fetch_one(db, "SELECT * FROM events WHERE id = ?", (event_id,))
+    if event is None:
+        raise NotFound("No such event.")
+
+    def rows(sql: str, params: tuple = (event_id,)) -> list[sqlite3.Row]:
+        return db.execute(sql, params).fetchall()
+
+    criteria = rows("SELECT * FROM criteria WHERE event_id = ? ORDER BY position")
+    key_of = {c["id"]: c["key"] for c in criteria}
+    overrides: dict[str, dict[str, float]] = {}
+    for w in rows("SELECT w.* FROM criterion_track_weights w JOIN criteria c ON c.id = w.criterion_id WHERE c.event_id = ?"):
+        overrides.setdefault(w["criterion_id"], {})[w["track_id"]] = w["weight"]
+    judge_tracks: dict[str, list[str]] = {}
+    for jt in rows("SELECT user_id, track_id FROM judge_tracks WHERE event_id = ? ORDER BY track_id"):
+        judge_tracks.setdefault(jt["user_id"], []).append(jt["track_id"])
+    members: dict[str, list[str]] = {}
+    for m in rows("SELECT m.team_id, u.email FROM team_members m JOIN users u ON u.id = m.user_id WHERE m.event_id = ?"
+                  " ORDER BY m.team_id, m.role = 'captain' DESC, m.joined_at, u.email"):
+        members.setdefault(m["team_id"], []).append(m["email"])
+    tags: dict[str, list[str]] = {}
+    for t in rows("SELECT t.project_id, t.tag FROM project_tags t JOIN projects p ON p.id = t.project_id"
+                  " WHERE p.event_id = ? ORDER BY t.tag"):
+        tags.setdefault(t["project_id"], []).append(t["tag"])
+    items: dict[str, dict[str, int]] = {}
+    for i in rows("SELECT i.* FROM score_items i JOIN scores s ON s.id = i.score_id WHERE s.event_id = ?"):
+        items.setdefault(i["score_id"], {})[key_of.get(i["criterion_id"], i["criterion_id"])] = i["value"]
+
+    return {
+        "format": "doggfather.bundle",
+        "version": 1,
+        "exported_at": clock.now_iso(),
+        "event": {
+            "id": event["id"], "slug": event["slug"], "name": event["name"], "tagline": event["tagline"],
+            "description": event["description"], "submissions_open": event["submissions_open_at"],
+            "submissions_close": event["submissions_close_at"], "judging_close": event["judging_close_at"],
+            "max_team_size": event["max_team_size"], "review_target": event["review_target"],
+            "normalization": event["normalization"], "results_published_at": event["results_published_at"],
+            "voting_mode": event["voting_mode"], "voting_open": event["voting_open_at"],
+            "voting_close": event["voting_close_at"], "vote_credits": event["vote_credits"],
+        },
+        "tracks": [{"id": t["id"], "name": t["name"], "description": t["description"]}
+                   for t in rows("SELECT * FROM tracks WHERE event_id = ? ORDER BY position")],
+        "prizes": [{"id": z["id"], "name": z["name"], "value": z["value"], "description": z["description"],
+                    "track": z["track_id"]} for z in rows("SELECT * FROM prizes WHERE event_id = ? ORDER BY position")],
+        "questions": [{"id": q["id"], "prompt": q["prompt"], "help": q["help"], "kind": q["kind"],
+                       "options": json.loads(q["options"]), "required": bool(q["required"])}
+                      for q in rows("SELECT * FROM custom_questions WHERE event_id = ? ORDER BY position")],
+        "criteria": [{"key": c["key"], "label": c["label"], "description": c["description"], "weight": c["weight"],
+                      "min": c["min_score"], "max": c["max_score"], "track_weights": overrides.get(c["id"], {})}
+                     for c in criteria],
+        "organizers": [{"email": o["email"], "name": o["name"]} for o in rows(
+            "SELECT u.email, u.name FROM event_members m JOIN users u ON u.id = m.user_id"
+            " WHERE m.event_id = ? AND m.role = 'organizer' ORDER BY u.email")],
+        "judges": [{"id": j["id"], "name": j["name"], "email": j["email"], "tracks": judge_tracks.get(j["id"], [])}
+                   for j in rows("SELECT u.id, u.name, u.email FROM event_members m JOIN users u ON u.id = m.user_id"
+                                 " WHERE m.event_id = ? AND m.role = 'judge' ORDER BY u.id")],
+        "teams": [{"id": t["id"], "name": t["name"], "members": members.get(t["id"], [])}
+                  for t in rows("SELECT * FROM teams WHERE event_id = ? ORDER BY id")],
+        "projects": [{
+            "id": p["id"], "team": p["team_id"], "track": p["track_id"], "title": p["title"], "summary": p["tagline"],
+            "tagline": p["tagline"], "description": p["description"], "repo_url": p["repo_url"],
+            "demo_url": p["demo_url"], "video_url": p["video_url"], "tags": tags.get(p["id"], []),
+            "status": p["status"], "submitted_at": p["submitted_at"], "created_at": p["created_at"],
+            "updated_at": p["updated_at"],
+        } for p in rows("SELECT * FROM projects WHERE event_id = ? ORDER BY id")],
+        "scores": [{"judge": s["judge_id"], "project": s["project_id"], "criteria": items.get(s["id"], {}),
+                    "comment": s["comment"], "submitted_at": s["submitted_at"], "batch": s["batch"]}
+                   for s in rows("SELECT s.*, a.batch FROM scores s JOIN assignments a ON a.id = s.assignment_id"
+                                 " WHERE s.event_id = ? ORDER BY s.project_id, s.judge_id")],
+        "assignments": [{"judge": a["judge_id"], "project": a["project_id"], "batch": a["batch"]}
+                        for a in rows("SELECT * FROM assignments WHERE event_id = ? AND status = 'pending'"
+                                      " ORDER BY project_id, judge_id")],
+    }

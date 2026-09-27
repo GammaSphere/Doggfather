@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, File, Form, Query, UploadFile
+from fastapi import APIRouter, Body, File, Form, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,8 @@ from ..auth import CurrentUser, RequiredUser, User
 from ..deps import DB, AppSettings, Limiter, Payload
 from ..errors import Forbidden, NotFound
 from ..services import (
-    assignment, comments, duplicates, exports, gallery, judges, normalization, progress, projects, results, rubric,
+    assignment, bundles, comments, duplicates, exports, gallery, judges, normalization, progress, projects, results,
+    rubric,
     scoring, teams, tokens, voting, webhooks,
 )
 from ..services import events as event_service
@@ -674,3 +675,21 @@ def delete_webhook(db: DB, user: RequiredUser, event_id: str, webhook_id: str):
 @router.get("/events/{event_id}/webhooks/deliveries", tags=["webhooks"], summary="Recent delivery attempts")
 def webhook_deliveries(db: DB, user: RequiredUser, event_id: str):
     return [dict(r) for r in webhooks.deliveries(db, _organizer_event(db, user, event_id).id)]
+
+
+# ----------------------------------------------------------------- bundles
+
+@router.get("/events/{event_id}/bundle", tags=["bundles"], summary="Export the whole event as a bundle (organizers)")
+def export_bundle(db: DB, user: RequiredUser, event_id: str):
+    event = _organizer_event(db, user, event_id)
+    data = bundles.export_bundle(db, event.id)
+    audit.record(db, "export.bundle", actor=user, event_id=event.id, target_type="event", target_id=event.id)
+    return data
+
+
+@router.post("/bundles", tags=["bundles"], status_code=201, summary="Import an event bundle (fixtures.json shape)")
+def import_bundle(db: DB, user: RequiredUser, data: dict[str, Any] = Body(...)):
+    if not event_service.can_create_events(db, user):
+        raise Forbidden("Only admins and organizers can import events.")
+    report = bundles.import_bundle(db, data, actor=user)
+    return {"event_id": report.event_id, "counts": report.counts, "warnings": report.warnings}

@@ -7,6 +7,7 @@ without the guard still cannot write.
 
 from __future__ import annotations
 
+import json
 from datetime import timedelta
 from typing import Any
 
@@ -16,6 +17,7 @@ from .. import clock, policy
 from ..auth import RequiredUser, User
 from ..deps import DB, Form
 from ..errors import AppError, Forbidden, ValidationFailed
+from ..services import bundles
 from ..services import events as event_service
 from ..services.events import Event
 from .templating import redirect, render
@@ -75,6 +77,26 @@ def new_event_submit(request: Request, db: DB, user: RequiredUser, form: Form):
         return render(request, "organize/new.html", {"values": values, "errors": exc.fields,
                                                      "voting_modes": event_service.VOTING_MODES}, status_code=422)
     return redirect(request, f"/organize/{event.slug}", f"“{event.name}” is live. Add tracks and prizes next.")
+
+
+@router.post("/import")
+def import_event(request: Request, db: DB, user: RequiredUser, form: Form):
+    if not event_service.can_create_events(db, user):
+        raise Forbidden("Ask an admin to make you an organizer first.")
+    upload = form.get("bundle")
+    try:
+        data = json.loads(upload.file.read(20 * 1024 * 1024)) if hasattr(upload, "file") else None
+    except ValueError:
+        data = None
+    if not isinstance(data, dict):
+        return redirect(request, "/organize", "That file is not a JSON bundle.", "error")
+    try:
+        report = bundles.import_bundle(db, data, actor=user)
+    except AppError as exc:
+        return redirect(request, "/organize", exc.message, "error")
+    event = event_service.get_event(db, report.event_id)
+    note = f" ({len(report.warnings)} warnings)" if report.warnings else ""
+    return redirect(request, f"/organize/{event.slug}", f"Imported: {report.summary()}{note}.")
 
 
 # --------------------------------------------------------------- overview

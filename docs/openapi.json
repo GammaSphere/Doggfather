@@ -1229,6 +1229,47 @@
         ]
       }
     },
+    "/api/v1/bundles": {
+      "post": {
+        "operationId": "import_bundle_api_v1_bundles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Data",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import an event bundle (fixtures.json shape)",
+        "tags": [
+          "bundles"
+        ]
+      }
+    },
     "/api/v1/comments/{comment_id}/hide": {
       "post": {
         "operationId": "hide_comment_api_v1_comments__comment_id__hide_post",
@@ -1781,6 +1822,46 @@
         "summary": "Cast or replace your ballot (account-gated votes)",
         "tags": [
           "voting"
+        ]
+      }
+    },
+    "/api/v1/events/{event_id}/bundle": {
+      "get": {
+        "operationId": "export_bundle_api_v1_events__event_id__bundle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export the whole event as a bundle (organizers)",
+        "tags": [
+          "bundles"
         ]
       }
     },

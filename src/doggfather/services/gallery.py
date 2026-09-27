@@ -45,7 +45,7 @@ class GalleryQuery:
             tags=[t.lower() for t in dict.fromkeys(self.tags) if t][:12],
             sort=self.sort if self.sort in SORTS else "recent",
             page=max(1, self.page),
-            per_page=min(96, max(12, self.per_page)),
+            per_page=min(96, max(1, self.per_page)),
         )
 
 

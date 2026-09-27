@@ -12,5 +12,12 @@
     <a class="btn btn--teal" href="/api/events/{{ event.id }}/export/{{ kind }}.csv">Download CSV</a>
   </div>
   {% endfor %}
+  <div class="between">
+    <div>
+      <h3 class="card__title">Full bundle (JSON)</h3>
+      <p class="small muted mb-0">The whole event (settings, rubric, judges, teams, projects, scores, pending work) in the fixtures.json format. Import it into any Doggfather. <code>/api/v1/events/{{ event.id }}/bundle</code></p>
+    </div>
+    <a class="btn btn--primary" href="/api/v1/events/{{ event.id }}/bundle" download="{{ event.slug }}.bundle.json">Download bundle</a>
+  </div>
 </div>
 {% endblock %}
