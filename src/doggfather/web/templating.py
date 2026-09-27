@@ -93,6 +93,12 @@ def paragraphs(text: str | None) -> Markup:
     return Markup(html)
 
 
+def safe_url(value: str | None) -> str:
+    """Only http(s) links reach an href, whatever an import put in the database."""
+    text = str(value or "").strip()
+    return text if text.lower().startswith(("http://", "https://")) else "#"
+
+
 def pct(part: float, whole: float) -> int:
     return int(round(100 * part / whole)) if whole else 0
 
@@ -119,6 +125,7 @@ def build_environment(settings: Settings) -> Environment:
         initials=initials,
         tojson_compact=lambda v: Markup(json.dumps(v, separators=(",", ":"))),
         zip=lambda a, b: zip(a, b),
+        safe_url=safe_url,
     )
     env.globals.update(
         version=__version__,

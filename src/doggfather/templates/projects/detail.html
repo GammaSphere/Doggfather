@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ p.title }}{% endblock %}
+{% block description %}{{ p.tagline or p.title }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/projects?event={{ event.id }}">{{ event.name }}</a>{% if p.track_name %}<a href="/projects?event={{ event.id }}&track={{ p.track_id }}">{{ p.track_name }}</a>{% endif %}<span>{{ p.title }}</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ PROJECT / {{ p.id|upper }} ]</p>
+        <h1 class="display display--lg">{{ p.title }}</h1>
+      </div>
+      {% if p.tagline %}<p class="lead">{{ p.tagline }}</p>{% endif %}
+    </div>
+    <div class="cluster mb-3">
+      {% if p.status != "submitted" %}{{ ui.status(p.status, "warn") }}{% endif %}
+      {% if p.track_name %}<a class="tag tag--pink" href="/projects?event={{ event.id }}&track={{ p.track_id }}">{{ p.track_name }}</a>{% endif %}
+      <span class="tag tag--teal">{{ p.team_name }}</span>
+      {% for tag in p.tags %}<a class="tag" href="/projects?tag={{ tag|urlencode }}">#{{ tag }}</a>{% endfor %}
+      {% if is_organizer and p.duplicate_of %}<span class="tag tag--warn">possible duplicate of {{ p.duplicate_of }}</span>{% endif %}
+    </div>
+
+    <div class="grid grid--split">
+      <div class="stack-lg">
+        {% if p.thumbnail %}<img src="/uploads/{{ p.thumbnail }}" alt="{{ p.title }} thumbnail" style="border:1px solid var(--line); width:100%">{% endif %}
+        <div>
+          {{ ui.shead("01", "About") }}
+          <div class="prose">{{ p.description|paras if p.description else "No description yet." }}</div>
+        </div>
+        {% if p.images %}
+        <div>
+          {{ ui.shead("02", "Gallery") }}
+          <div class="gallery-strip">
+            {% for img in p.images %}<figure><a href="/uploads/{{ img.file }}"><img src="/uploads/{{ img.file }}" alt="{{ img.caption or p.title }}" loading="lazy"></a>{% if img.caption %}<figcaption>{{ img.caption }}</figcaption>{% endif %}</figure>{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% set answered = p.answers|selectattr("answer")|list %}
+        {% if answered %}
+        <div>
+          {{ ui.shead("03", "Q&A") }}
+          <dl class="kv">{% for a in answered %}<dt>{{ a.prompt }}</dt><dd>{{ a.answer }}</dd>{% endfor %}</dl>
+        </div>
+        {% endif %}
+        {% block after_about %}{% endblock %}
+      </div>
+
+      <aside class="stack sticky-panel">
+        <section class="card card--panel">
+          <div class="card__head"><h2 class="card__title">Links</h2></div>
+          <div class="stack">
+            {% if p.repo_url %}<a class="btn btn--block" href="{{ p.repo_url|safe_url }}" rel="noopener nofollow ugc" target="_blank">Source code &gt;&gt;&gt;</a>{% endif %}
+            {% if p.demo_url %}<a class="btn btn--block btn--teal" href="{{ p.demo_url|safe_url }}" rel="noopener nofollow ugc" target="_blank">Live demo &gt;&gt;&gt;</a>{% endif %}
+            {% if p.video_url %}<a class="btn btn--block" href="{{ p.video_url|safe_url }}" rel="noopener nofollow ugc" target="_blank">Demo video &gt;&gt;&gt;</a>{% endif %}
+            {% if not (p.repo_url or p.demo_url or p.video_url) %}<p class="small muted">No links yet.</p>{% endif %}
+          </div>
+        </section>
+        <section class="card">
+          <div class="card__head"><h2 class="card__title">Team</h2><span class="kicker">{{ p.members|length }}</span></div>
+          <ul class="arrows">{% for m in p.members %}<li>{{ m.name }}</li>{% endfor %}</ul>
+          <dl class="kv mt-2">
+            <dt>Event</dt><dd><a href="/events/{{ event.slug }}">{{ event.name }}</a></dd>
+            <dt>Submitted</dt><dd>{{ ui.time(p.submitted_at) }}</dd>
+            <dt>Updated</dt><dd>{{ ui.time(p.updated_at) }}</dd>
+          </dl>
+        </section>
+        {% if is_editor and event.submissions_open() %}
+          <a class="btn btn--primary btn--block" href="/projects/{{ p.id }}/edit">Edit submission &gt;&gt;&gt;</a>
+        {% endif %}
+        {% block sidebar_extra %}{% endblock %}
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}

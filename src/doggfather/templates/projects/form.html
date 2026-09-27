@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit " ~ project.title if project else "New submission" }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/events/{{ event.slug }}">{{ event.name }}</a><a href="/events/{{ event.slug }}/team">Team</a><span>{{ "Edit" if project else "New submission" }}</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ SUBMISSION / {{ (project.id if project else "draft")|upper }} ]</p>
+        <h1 class="display display--lg">{{ project.title if project else "New project" }}</h1>
+      </div>
+      <div class="cluster">
+        {% if project %}{{ ui.status(project.status, "ok" if project.status == "submitted" else "warn") }}{% endif %}
+        {% if is_open %}
+          <span class="small muted">Deadline in <span class="pink" data-countdown="{{ event.submissions_close_at }}">{{ event.submissions_close_at|ago }}</span></span>
+        {% else %}
+          {{ ui.status("Submissions closed") }}
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not is_open %}
+      <div class="notice notice--pink mb-2">Submissions closed {{ event.submissions_close_at|dt }}. This page is read-only; the server refuses every change after the deadline.</div>
+    {% endif %}
+    {% if errors and not errors.get("title") %}<div class="flash flash--error mb-2">Some fields need attention.</div>{% endif %}
+
+    <div class="grid grid--split">
+      <form method="post" action="{{ '/projects/' ~ project.id ~ '/edit' if project else '/projects/new' }}" enctype="multipart/form-data" class="card card--panel">
+        {{ ui.csrf() }}
+        {% if not project %}<input type="hidden" name="event" value="{{ event.id }}">{% endif %}
+        <fieldset {% if not is_open %}disabled{% endif %} style="border:0; padding:0">
+          <div class="form form--2">
+            {{ ui.field("title", "Project name", values.title, required=True, errors=errors, attrs='maxlength="80"') }}
+            {{ ui.select("track_id", "Track", tracks|map(attribute="id")|zip(tracks|map(attribute="name"))|list, values.track_id or "", blank="Choose a track", errors=errors) }}
+            {{ ui.field("tagline", "Tagline", values.tagline, errors=errors, full=True, help="One line: what it is and who it is for.", attrs='maxlength="140"') }}
+            {{ ui.textarea("description", "Long description", values.description, errors=errors, rows=10, help="What it does, how it works, what you would do next. Plain text; blank lines make paragraphs.") }}
+            {{ ui.field("repo_url", "Source repository", values.repo_url, type="url", errors=errors, placeholder="https://github.com/…") }}
+            {{ ui.field("demo_url", "Live link", values.demo_url, type="url", errors=errors, placeholder="https://…") }}
+            {{ ui.field("video_url", "Demo video", values.video_url, type="url", errors=errors, placeholder="https://…", help="A hosted video link (YouTube, Vimeo, PeerTube…).") }}
+            {{ ui.field("tags", "Tech stack tags", values.tags, errors=errors, placeholder="python fastapi sqlite", help="Space or comma separated, up to 12.") }}
+            {% if project %}
+            <div class="field field--full {% if errors.get('thumbnail') %}has-error{% endif %}">
+              <label for="f-thumbnail">Thumbnail</label>
+              <input id="f-thumbnail" type="file" name="thumbnail" accept="image/png,image/jpeg,image/gif,image/webp">
+              {% if errors.get("thumbnail") %}<span class="field__error">{{ errors.thumbnail }}</span>{% else %}<span class="field__help">PNG, JPEG, GIF or WebP, up to 2 MB. 16:9 looks best.</span>{% endif %}
+            </div>
+            {% endif %}
+          </div>
+          {% if questions %}
+          <div class="divider-label">Organizer questions</div>
+          <div class="form">
+            {% for q in questions %}{% set key = "q_" ~ q.id %}
+              {% if q.kind == "textarea" %}
+                {{ ui.textarea(key, q.prompt, values.get(key, ""), help=q.help, errors=errors, required=q.required, rows=4) }}
+              {% elif q.kind == "choice" %}
+                {{ ui.select(key, q.prompt, q.options|zip(q.options)|list, values.get(key, ""), help=q.help, errors=errors, required=q.required, blank="Choose…", full=True) }}
+              {% else %}
+                {{ ui.field(key, q.prompt, values.get(key, ""), type="url" if q.kind == "url" else "text", help=q.help, errors=errors, required=q.required, full=True) }}
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+          <div class="form__actions mt-2">
+            {% if project %}
+              <button class="btn" type="submit" name="action" value="save">Save</button>
+              {% if project.status != "submitted" %}<button class="btn btn--primary" type="submit" name="action" value="submit">Save &amp; submit &gt;&gt;&gt;</button>{% endif %}
+            {% else %}
+              <button class="btn btn--primary" type="submit">Create draft &gt;&gt;&gt;</button>
+            {% endif %}
+          </div>
+        </fieldset>
+      </form>
+
+      <aside class="stack">
+        {% if project %}
+        <section class="card {% if project.status == 'submitted' %}card--teal{% else %}card--pink{% endif %}">
+          <div class="card__head"><h2 class="card__title">Status</h2>{{ ui.status(project.status, "ok" if project.status == "submitted" else "warn") }}</div>
+          {% if project.status == "submitted" %}
+            <p class="small muted">In the gallery since {{ project.submitted_at|dt }}. Edits stay live until the deadline.</p>
+            <div class="btn-row">
+              <a class="btn btn--sm" href="/projects/{{ project.id }}">View public page</a>
+              {% if is_open %}
+              <form method="post" action="/projects/{{ project.id }}/unsubmit" data-confirm="Hide this project from the gallery?">
+                {{ ui.csrf() }}<button class="btn btn--sm btn--danger" type="submit">Return to draft</button>
+              </form>
+              {% endif %}
+            </div>
+          {% else %}
+            {% if missing %}
+              <p class="small muted mb-1">Before you can submit:</p>
+              <ul class="arrows">{% for field, why in missing.items() %}<li>{{ why }}</li>{% endfor %}</ul>
+            {% else %}
+              <p class="small">Everything required is filled in.</p>
+              {% if is_open %}
+              <form method="post" action="/projects/{{ project.id }}/submit">
+                {{ ui.csrf() }}<button class="btn btn--primary btn--block" type="submit">Submit project &gt;&gt;&gt;</button>
+              </form>
+              {% endif %}
+            {% endif %}
+          {% endif %}
+        </section>
+
+        <section class="card">
+          <div class="card__head"><h2 class="card__title">Thumbnail</h2></div>
+          {% if project.thumbnail %}<img src="/uploads/{{ project.thumbnail }}" alt="Current thumbnail">{% else %}<p class="small muted">None yet. Upload one with the form.</p>{% endif %}
+        </section>
+
+        <section class="card">
+          <div class="card__head"><h2 class="card__title">Image gallery</h2><span class="kicker">{{ project.images|length }} / 8</span></div>
+          {% if project.images %}
+          <div class="gallery-strip mb-2">
+            {% for img in project.images %}
+            <figure>
+              <img src="/uploads/{{ img.file }}" alt="{{ img.caption }}">
+              <figcaption class="between">{{ img.caption or "—" }}
+                {% if is_open %}
+                <form method="post" action="/projects/{{ project.id }}/images/{{ img.id }}/delete" class="inline-form">{{ ui.csrf() }}<button class="linkish small" type="submit">remove</button></form>
+                {% endif %}
+              </figcaption>
+            </figure>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if is_open %}
+          <form method="post" action="/projects/{{ project.id }}/images" enctype="multipart/form-data" class="form">
+            {{ ui.csrf() }}
+            <div class="field"><label for="f-image">Add image</label><input id="f-image" type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" required></div>
+            {{ ui.field("caption", "Caption", "", attrs='maxlength="140"') }}
+            <div class="form__actions"><button class="btn btn--sm" type="submit">Upload</button></div>
+          </form>
+          {% endif %}
+        </section>
+        {% else %}
+        <section class="card">
+          <div class="card__head"><h2 class="card__title">How it works</h2></div>
+          <ul class="arrows">
+            <li>Create a draft: only your team and the organizers can see it.</li>
+            <li>Add images, links and answers, then submit to enter the gallery.</li>
+            <li>Keep editing until {{ event.submissions_close_at|dt }}. After that the server refuses every change.</li>
+          </ul>
+        </section>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}

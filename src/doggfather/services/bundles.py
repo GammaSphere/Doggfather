@@ -62,6 +62,15 @@ def name_from_email(email: str) -> str:
     return words[0].capitalize()
 
 
+def _link(value: Any, where: str, report: "ImportReport") -> str:
+    """Keep only http(s) links; anything else is dropped with a warning."""
+    text = str(value or "").strip()
+    if text and not text.lower().startswith(("http://", "https://")):
+        report.warnings.append(f"{where}: dropped non-http link {text[:40]!r}")
+        return ""
+    return text[:500]
+
+
 def _require(data: dict, key: str, where: str) -> Any:
     if key not in data or data[key] in (None, ""):
         raise ValidationFailed(f"Bundle is missing {where}.{key}.", fields={f"{where}.{key}": "required"})
@@ -214,7 +223,8 @@ def import_bundle(db: sqlite3.Connection, data: dict[str, Any], *, actor: User |
                 "INSERT INTO projects (id, event_id, team_id, track_id, title, tagline, description, video_url, repo_url,"
                 " demo_url, status, submitted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (pid, event_id, team_id, track, _require(p, "title", "projects[]"), summary,
-                 p.get("description") or summary, p.get("video_url", ""), p.get("repo_url", ""), p.get("demo_url", ""),
+                 p.get("description") or summary, _link(p.get("video_url"), pid, report),
+                 _link(p.get("repo_url"), pid, report), _link(p.get("demo_url"), pid, report),
                  status, submitted_at, p.get("created_at") or created, p.get("updated_at") or created),
             )
             for tag in p.get("tags") or []:
