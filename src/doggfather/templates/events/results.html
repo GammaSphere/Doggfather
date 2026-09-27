@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Results · {{ event.name }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/events/{{ event.slug }}">{{ event.name }}</a><span>Results</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ RESULTS / {{ event.id|upper }} ]</p>
+        <h1 class="display display--lg">The <span class="accent">ranking</span></h1>
+      </div>
+      <p class="lead">Ranked by the {{ method_label|lower }}, which corrects for judges who score harshly or generously. <a href="/judging">How that works</a>.</p>
+    </div>
+    {% if preview %}<div class="notice notice--pink mb-2">Organizer preview: these results are not published yet. The public and judges get 403 here.</div>{% endif %}
+
+    {% if leaders %}
+    {{ ui.shead("01", "Track leaders") }}
+    <div class="grid grid--4 mb-3">
+      {% for track, r in leaders.items() %}
+      <a class="card" href="/projects/{{ r.id }}">
+        <span class="kicker">{{ track }}</span>
+        <h3 class="card__title mt-1">{{ r.title }}</h3>
+        <p class="small muted mb-0">{{ r.team_name }} · overall #{{ r.rank }}</p>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {{ ui.shead("02", "Overall") }}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th class="num">Rank</th><th>Project</th><th>Team</th><th>Track</th><th class="num">Reviews</th><th class="num">Score</th></tr></thead>
+        <tbody>
+        {% for r in table.rows %}
+          <tr>
+            <td class="num"><strong class="{% if r.rank and r.rank <= 3 %}pink{% endif %}">{{ r.rank or "—" }}</strong></td>
+            <td><a href="/projects/{{ r.id }}"><strong>{{ r.title }}</strong></a></td>
+            <td>{{ r.team_name }}</td>
+            <td class="small">{{ r.track_name or "—" }}</td>
+            <td class="num">{{ r.reviews }}</td>
+            <td class="num">{{ r.score|num }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

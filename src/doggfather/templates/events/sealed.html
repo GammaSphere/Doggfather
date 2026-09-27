@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Results sealed · {{ event.name }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <div class="hero__meta"><span>[ ERR / 403 ]</span><span class="pink">RESULTS_HIDDEN</span></div>
+    <h1 class="display display--xl"><span class="accent">Sealed</span></h1>
+    <p class="lead mt-2">{{ message }}</p>
+    <p class="prose mt-2">No scores, tallies or rankings for {{ event.name }} leave the server until the organizers publish them. That holds for judges and participants too, not just for this page.</p>
+    <div class="btn-row mt-3">
+      <a class="btn btn--primary" href="/projects?event={{ event.id }}">Browse the gallery &gt;&gt;&gt;</a>
+      <a class="btn" href="/events/{{ event.slug }}">Event page</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

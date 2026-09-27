@@ -20,7 +20,8 @@ from .. import policy
 from ..auth import CurrentUser, User
 from ..deps import DB
 from ..errors import Forbidden, NotAuthenticated, NotFound
-from ..services import scoring
+from ..services import events as event_service
+from ..services import results, scoring
 
 router = APIRouter(prefix="/api", tags=["judging"])
 
@@ -57,3 +58,11 @@ def my_scores(db: DB, user: CurrentUser, judge: str | None = Query(default=None,
 def judge_scores(db: DB, user: CurrentUser, judge_id: str, event: str | None = None):
     resolved = _authorize(db, user, judge_id, event)
     return _scores_response(db, resolved, event)
+
+
+@router.get("/events/{event_id}/results", summary="Ranked results (organizers always; everyone after publication)")
+def event_results(db: DB, user: CurrentUser, event_id: str, method: str | None = None):
+    event = event_service.get_event(db, event_id)
+    if policy.is_organizer(db, user, event.id):
+        return results.serialize(results.compute_table(db, event, method), include_methods=True)
+    return results.serialize(results.visible_table(db, user, event), include_methods=False)

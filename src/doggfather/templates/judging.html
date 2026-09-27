@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}How judging works{% endblock %}
+{% block description %}The scoring formula, cross-judge normalization method, and isolation rules this portal uses, written down.{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <p class="label-term mb-1">[ METHOD / PUBLIC ]</p>
+    <h1 class="display display--lg">How judging <span class="accent">works</span></h1>
+    <p class="lead mt-2 mb-3">Platforms say they normalize scores. This one shows you exactly how, and lets organizers compare methods before they publish.</p>
+
+    {{ ui.shead("01", "Scorecards") }}
+    <div class="prose">
+      <p>Each judge scores each assigned project on every rubric criterion (1–5 by default). The organizer sets a weight per criterion, optionally per track. A scorecard's weighted total is</p>
+      <pre>weighted = Σ weight(c) · score(c) / Σ weight(c)</pre>
+      <p>Weights apply when results are computed, so re-weighting never rewrites a stored score, and every change is in the audit log.</p>
+    </div>
+
+    <div class="mt-4">{{ ui.shead("02", "Why normalize") }}</div>
+    <div class="prose">
+      <p>Judges differ. Some give everything a 4; some never give a 5. With 3–5 judges per project, the luck of the draw can move a project several places. Normalization removes each judge's personal offset so projects are compared on their merits.</p>
+    </div>
+
+    <div class="mt-4">{{ ui.shead("03", "The default: judge-bias model") }}</div>
+    <div class="prose">
+      <p>We fit an additive model to every scorecard: <code>score = overall mean + project quality + judge bias + noise</code>, by least squares with a ridge penalty (λ = 2) on the judge biases.</p>
+      <ul class="arrows">
+        <li>Judges who reviewed overlapping projects are compared on that shared work, so a judge who was simply handed a strong batch is not mistaken for a generous one.</li>
+        <li>A judge with few reviews gets a bias estimate shrunk toward zero: no evidence, no correction.</li>
+        <li>The published score is <code>mean + project quality</code>, still on the rubric scale.</li>
+      </ul>
+      <p>Organizers can also view, and choose, a shrunk per-judge z-score, the raw mean, or a within-judge Bradley–Terry ranking that uses only the order of each judge's scores. The organizer's results page shows every project's rank under all four, with movements relative to the raw mean.</p>
+    </div>
+
+    <div class="mt-4">{{ ui.shead("04", "Isolation") }}</div>
+    <ul class="arrows">
+      <li>Judges see only projects in their tracks, and only their own scores. Requests for anything else get 403 from the server.</li>
+      <li>Nobody but organizers sees aggregate scores before results are published.</li>
+      <li>Every organizer action that affects results is written to a hash-chained audit log.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

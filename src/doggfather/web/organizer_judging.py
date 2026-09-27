@@ -7,7 +7,8 @@ from fastapi import APIRouter, Request
 from ..auth import CurrentUser, RequiredUser
 from ..deps import DB, AppSettings, Form
 from ..errors import AppError, ValidationFailed
-from ..services import assignment, events as event_service, judges, rubric
+from ..services import assignment, judges, normalization, results, rubric
+from ..services import events as event_service
 from .organizer import organizer_event
 from .templating import redirect, render
 
@@ -175,3 +176,36 @@ def invite_accept(request: Request, db: DB, user: RequiredUser, token: str):
     except AppError as exc:
         return redirect(request, f"/invite/{token}", exc.message, "error")
     return redirect(request, f"/judge/{event.slug}", f"You are a judge for {event.name}.")
+
+
+# ----------------------------------------------------------------- results
+
+@router.get("/{slug}/results")
+def results_page(request: Request, db: DB, user: RequiredUser, slug: str, method: str = ""):
+    event = organizer_event(db, user, slug)
+    table = results.organizer_table(db, user, event, method or None)
+    return render(request, "organize/results.html", {
+        "event": event, "tab": "results", "table": table,
+        "methods": normalization.METHOD_LABELS,
+    })
+
+
+@router.post("/{slug}/results")
+def results_action(request: Request, db: DB, user: RequiredUser, slug: str, form: Form):
+    event = organizer_event(db, user, slug)
+    action = str(form.get("action") or "")
+    try:
+        if action == "method":
+            results.set_method(db, user, event, str(form.get("method") or ""))
+            message = "Ranking method saved."
+        elif action == "publish":
+            results.publish(db, user, event)
+            message = "Results published. They are now public."
+        elif action == "unpublish":
+            results.unpublish(db, user, event)
+            message = "Results hidden again."
+        else:
+            raise ValidationFailed("Unknown action.")
+    except AppError as exc:
+        return redirect(request, f"/organize/{slug}/results", exc.message, "error")
+    return redirect(request, f"/organize/{slug}/results", message)

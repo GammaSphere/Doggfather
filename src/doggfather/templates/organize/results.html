@@ -1,0 +1,98 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Results{% endblock %}
+{% block body %}
+{% set info = table.info %}
+<div class="tiles mb-3">
+  {{ ui.tile(info.observations, "Unit / Scorecards", "filed reviews in the model") }}
+  {{ ui.tile(table.judges|length, "Unit / Judges", table.components|length ~ " connected group" ~ ("s" if table.components|length != 1 else ""), "teal") }}
+  {{ ui.tile("%.2f"|format(info.grand_mean) if info.grand_mean is not none else "—", "Unit / Mean", "grand mean, weighted") }}
+  {{ ui.tile(table.judges|selectattr("flat")|list|length, "Unit / Flat", "judges with zero score spread", "teal") }}
+</div>
+
+<div class="grid grid--split mb-3">
+  <div class="card">
+    <div class="card__head"><h2 class="card__title">Ranking method</h2>
+      {% if event.results_published %}{{ ui.status("Published " ~ (event.results_published_at|ago), "ok") }}{% else %}{{ ui.status("Sealed", "warn") }}{% endif %}
+    </div>
+    <div class="cluster mb-2">
+      {% for key, label in methods.items() %}
+        <a class="tag {% if table.method == key %}is-on{% endif %}" href="/organize/{{ event.slug }}/results?method={{ key }}">{{ label }}{% if key == event.normalization %} ✓{% endif %}</a>
+      {% endfor %}
+    </div>
+    <p class="small muted">Previewing <strong class="pink">{{ methods[table.method] }}</strong>. ✓ marks the method the published ranking uses. Rank agreement with the raw mean (Spearman ρ):
+      {% for m, rho in info.agreement.items() %}<span class="nowrap">{{ methods[m] }} {{ "%.2f"|format(rho) }}</span>{{ " · " if not loop.last }}{% endfor %}.</p>
+    <p class="small muted mb-0">Why these methods and why the judge-bias model is the default: <a href="/judging">the judging method</a>.</p>
+  </div>
+  <div class="card card--panel stack">
+    <div class="card__head"><h2 class="card__title">Publish</h2><span class="kicker">audited</span></div>
+    {% if not event.results_published %}
+      <form method="post" action="/organize/{{ event.slug }}/results" class="stack">
+        {{ ui.csrf() }}<input type="hidden" name="action" value="method"><input type="hidden" name="method" value="{{ table.method }}">
+        <button class="btn btn--block" type="submit" {% if table.method == event.normalization %}disabled{% endif %}>Use {{ methods[table.method] }}</button>
+      </form>
+      <form method="post" action="/organize/{{ event.slug }}/results" data-confirm="Publish results for everyone to see?">
+        {{ ui.csrf() }}<input type="hidden" name="action" value="publish">
+        <button class="btn btn--primary btn--block" type="submit">Publish results &gt;&gt;&gt;</button>
+      </form>
+      <p class="small muted mb-0">Publishing needs judging to be closed. Until then only organizers can see this page; the public and judges get 403.</p>
+    {% else %}
+      <a class="btn btn--block btn--teal" href="/events/{{ event.slug }}/results">Public results page</a>
+      <form method="post" action="/organize/{{ event.slug }}/results" data-confirm="Hide results again?">
+        {{ ui.csrf() }}<input type="hidden" name="action" value="unpublish">
+        <button class="btn btn--danger btn--block" type="submit">Unpublish</button>
+      </form>
+    {% endif %}
+    <a class="btn btn--block btn--sm" href="/api/events/{{ event.id }}/export/results.csv?method={{ table.method }}">Download CSV</a>
+  </div>
+</div>
+
+{{ ui.shead("01", "Ranking") }}
+<div class="table-wrap mb-3">
+  <table class="table table--dense">
+    <thead><tr>
+      <th class="num">Rank</th><th class="num">Move</th><th>Project</th><th>Track</th><th class="num">Reviews</th>
+      <th class="num">Raw</th><th class="num">Z-shrunk</th><th class="num">Bias model</th><th class="num">BT θ</th>
+    </tr></thead>
+    <tbody>
+    {% for r in table.rows %}
+      <tr>
+        <td class="num"><strong class="pink">{{ r.rank or "—" }}</strong></td>
+        <td class="num {% if r.movement > 0 %}move-up{% elif r.movement < 0 %}move-down{% else %}move-flat{% endif %}">
+          {% if r.movement > 0 %}▲{{ r.movement }}{% elif r.movement < 0 %}▼{{ -r.movement }}{% else %}·{% endif %}
+        </td>
+        <td><a href="/projects/{{ r.id }}"><strong>{{ r.title }}</strong></a>{% if r.duplicate_of %} <span class="tag tag--warn">dup?</span>{% endif %}<br><span class="small dim">{{ r.team_name }}</span></td>
+        <td class="small">{{ r.track_name or "—" }}</td>
+        <td class="num {% if r.reviews < event.review_target %}amber{% endif %}">{{ r.reviews }}</td>
+        <td class="num">{{ r.raw|num }} <span class="dim">#{{ r.raw_rank }}</span></td>
+        <td class="num">{{ r.zscore|num }} <span class="dim">#{{ r.zscore_rank }}</span></td>
+        <td class="num">{{ r.bias|num }} <span class="dim">#{{ r.bias_rank }}</span></td>
+        <td class="num">{{ r.pairwise|num }} <span class="dim">#{{ r.pairwise_rank }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{{ ui.shead("02", "Judge calibration") }}
+<p class="small muted">Bias is what the model subtracts: positive means generous, negative means harsh, in rubric points. It is shrunk toward zero for judges with few reviews (λ = {{ info.bias.get("lambda", 2) }}).</p>
+<div class="table-wrap">
+  <table class="table table--dense">
+    <thead><tr><th>Judge</th><th class="num">Reviews</th><th class="num">Mean</th><th class="num">Spread (sd)</th><th class="num">Bias</th><th>Flags</th></tr></thead>
+    <tbody>
+    {% for j in table.judges %}
+      <tr>
+        <td><strong>{{ j.name }}</strong> <span class="dim small">{{ j.id }}</span></td>
+        <td class="num">{{ j.n }}</td>
+        <td class="num">{{ j.mean|num }}</td>
+        <td class="num">{{ j.sd|num }}</td>
+        <td class="num {% if j.bias > 0.15 %}move-up{% elif j.bias < -0.15 %}move-down{% endif %}">{{ "%+.2f"|format(j.bias) }}</td>
+        <td>
+          {% if j.flat %}<span class="tag tag--warn" title="Every score identical: no ranking signal">flat scorer</span>{% endif %}
+          {% if j.thin %}<span class="tag" title="Fewer than 3 reviews: corrections are mostly shrunk away">few reviews</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
