@@ -7,12 +7,14 @@ services:
       target: runtime
     image: doggfather:latest
     ports:
-      - "8080:8080"
+      # Host port is configurable for machines where 8080 is taken:
+      #   DOGFOOD_PORT=18080 docker compose up
+      - "${DOGFOOD_PORT:-8080}:8080"
     environment:
       # Demo mode seeds the fixture event, well-known passwords and the fixed
       # sessions listed in .dogfood.toml. Set to "0" for a real deployment.
       DOGFOOD_DEMO: "1"
-      DOGFOOD_BASE_URL: "http://localhost:8080"
+      DOGFOOD_BASE_URL: "http://localhost:${DOGFOOD_PORT:-8080}"
     volumes:
       - portal-data:/data
     restart: unless-stopped
