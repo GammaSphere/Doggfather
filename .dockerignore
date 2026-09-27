@@ -1,0 +1,13 @@
+.git
+.venv
+venv
+data
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.idea
+.vscode
+.omc
+*.md
+!README.md
+acceptance-report.txt

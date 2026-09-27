@@ -1,0 +1,29 @@
+name: doggfather
+
+services:
+  portal:
+    build:
+      context: .
+      target: runtime
+    image: doggfather:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # Demo mode seeds the fixture event, well-known passwords and the fixed
+      # sessions listed in .dogfood.toml. Set to "0" for a real deployment.
+      DOGFOOD_DEMO: "1"
+      DOGFOOD_BASE_URL: "http://localhost:8080"
+    volumes:
+      - portal-data:/data
+    restart: unless-stopped
+
+  tests:
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    environment:
+      DOGFOOD_WEBHOOK_WORKER: "0"
+
+volumes:
+  portal-data:

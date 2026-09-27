@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==9.1.1", "httpx==0.28.1"]
+dev = ["pytest==9.1.1", "httpx2==2.13.1"]
 
 [project.scripts]
 doggfather = "doggfather.__main__:main"
@@ -35,3 +35,7 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
 filterwarnings = ["error::DeprecationWarning:doggfather.*"]
+
+[tool.pyright]
+extraPaths = ["src"]
+pythonVersion = "3.12"
