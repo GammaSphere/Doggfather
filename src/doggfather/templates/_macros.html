@@ -1,0 +1,109 @@
+{# Shared UI pieces. Import with: {% import "_macros.html" as ui with context %} #}
+
+{% macro logo(cls="brand__mark") -%}
+<svg class="{{ cls }}" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+  <path d="M10.2 10.2 11.6 4h8.8l1.4 6.2"/>
+  <path d="M4.5 10.6h23"/>
+  <path d="M10.9 7.8h10.2" stroke="#FF3D6E"/>
+  <path d="M8.4 12.6c0 9 3 15.4 7.6 15.4s7.6-6.4 7.6-15.4"/>
+  <path d="M8.4 13c-2.8.8-3.9 5.2-3 8.8l3.2-3"/>
+  <path d="M23.6 13c2.8.8 3.9 5.2 3 8.8l-3.2-3"/>
+  <circle cx="12.9" cy="16.6" r=".9" fill="currentColor" stroke="none"/>
+  <circle cx="19.1" cy="16.6" r=".9" fill="currentColor" stroke="none"/>
+  <path d="M14.4 21.6h3.2L16 23.4z" fill="currentColor"/>
+</svg>
+{%- endmacro %}
+
+{% macro shead(num, label) -%}
+<div class="shead">
+  <span class="shead__ghost" aria-hidden="true">{{ num }}</span>
+  <span class="shead__label">[ {{ num }} / {{ label }} ]</span>
+  <span class="shead__rule" aria-hidden="true"></span>
+</div>
+{%- endmacro %}
+
+{% macro status(text, tone="muted") -%}
+<span class="status status--{{ tone }}">[ {{ text }} ]</span>
+{%- endmacro %}
+
+{% macro csrf() -%}
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{%- endmacro %}
+
+{% macro time(value) -%}
+{% if value %}<time datetime="{{ value }}" title="{{ value }}">{{ value|dt }}</time>{% else %}<span class="dim">—</span>{% endif %}
+{%- endmacro %}
+
+{% macro progress(value, total, tone="") -%}
+{% set p = pct(value, total) %}
+<div class="progress {% if tone %}progress--{{ tone }}{% endif %}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ p }}" aria-label="{{ value }} of {{ total }}">
+  <span style="--pct: {{ p }}%"></span>
+</div>
+{%- endmacro %}
+
+{% macro tile(value, unit, label, tone="") -%}
+<div class="tile">
+  <span class="tile__unit">{{ unit }}</span>
+  <span class="tile__value {% if tone %}tile__value--{{ tone }}{% endif %}">{{ value }}</span>
+  <span class="tile__label">{{ label }}</span>
+</div>
+{%- endmacro %}
+
+{% macro field(name, label, value="", type="text", help="", errors=None, required=False, placeholder="", attrs="", full=False) -%}
+{% set err = errors.get(name) if errors else None %}
+<div class="field {% if full %}field--full{% endif %} {% if err %}has-error{% endif %}">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="field__req">*</span>{% endif %}</label>
+  <input id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {% if placeholder %}placeholder="{{ placeholder }}"{% endif %} {% if required %}required{% endif %} {{ attrs|safe }}>
+  {% if err %}<span class="field__error">{{ err }}</span>{% elif help %}<span class="field__help">{{ help }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro textarea(name, label, value="", help="", errors=None, required=False, rows=6, placeholder="", full=True) -%}
+{% set err = errors.get(name) if errors else None %}
+<div class="field {% if full %}field--full{% endif %} {% if err %}has-error{% endif %}">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="field__req">*</span>{% endif %}</label>
+  <textarea id="f-{{ name }}" name="{{ name }}" rows="{{ rows }}" {% if placeholder %}placeholder="{{ placeholder }}"{% endif %} {% if required %}required{% endif %}>{{ value or '' }}</textarea>
+  {% if err %}<span class="field__error">{{ err }}</span>{% elif help %}<span class="field__help">{{ help }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro select(name, label, options, selected="", help="", errors=None, required=False, blank=None, full=False) -%}
+{% set err = errors.get(name) if errors else None %}
+<div class="field {% if full %}field--full{% endif %} {% if err %}has-error{% endif %}">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="field__req">*</span>{% endif %}</label>
+  <select id="f-{{ name }}" name="{{ name }}" {% if required %}required{% endif %}>
+    {% if blank is not none %}<option value="">{{ blank }}</option>{% endif %}
+    {% for value, text in options %}
+    <option value="{{ value }}" {% if value|string == selected|string %}selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+  {% if err %}<span class="field__error">{{ err }}</span>{% elif help %}<span class="field__help">{{ help }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro empty(title, text="") -%}
+<div class="empty">
+  <span class="empty__title">[ {{ title }} ]</span>
+  {% if text %}<span>{{ text }}</span>{% endif %}
+  {{ caller() if caller else "" }}
+</div>
+{%- endmacro %}
+
+{% macro pager(page, pages, url_for) -%}
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  {% for n in range(1, pages + 1) %}
+    {% if n == page %}<span class="is-current" aria-current="page">{{ n }}</span>{% else %}<a href="{{ url_for(n) }}">{{ n }}</a>{% endif %}
+  {% endfor %}
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro phase_status(event) -%}
+{% set ph = event.phase %}
+{% if ph == "submissions" %}{{ status("Submissions open", "live") }}
+{% elif ph == "judging" %}{{ status("Judging", "open") }}
+{% elif ph == "results" %}{{ status("Results out", "ok") }}
+{% elif ph == "upcoming" %}{{ status("Upcoming", "warn") }}
+{% else %}{{ status("Closed") }}{% endif %}
+{%- endmacro %}

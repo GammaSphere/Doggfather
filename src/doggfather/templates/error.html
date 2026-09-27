@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ status_code }} {{ heading }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <div class="hero__meta">
+      <span>[ ERR / {{ status_code }} ]</span>
+      <span class="pink">{{ code|upper }}</span>
+    </div>
+    <h1 class="display display--xl"><span class="accent">{{ status_code }}</span></h1>
+    <h2 class="display display--md mt-2">{{ heading }}</h2>
+    <p class="lead mt-2">{{ message }}</p>
+    <div class="btn-row mt-3">
+      {% if status_code == 401 %}<a class="btn btn--primary" href="/login?next={{ path|urlencode }}">Log in &gt;&gt;&gt;</a>{% endif %}
+      <a class="btn" href="/">Back to base</a>
+      <a class="btn" href="/projects">Browse the gallery</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

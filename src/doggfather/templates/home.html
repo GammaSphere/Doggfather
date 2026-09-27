@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Build the platform that will judge you{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="wrap">
+    <div class="hero__meta">
+      <span>[ NODE / DF-01 ]</span>
+      <span>REV {{ version }}</span>
+      <span class="live"><span class="live-dot" aria-hidden="true"></span>SYS READY · {{ stats.events }} {{ "EVENT" if stats.events == 1 else "EVENTS" }} ONLINE</span>
+    </div>
+    <h1 class="wordmark" data-text="DOGGFATHER">DOGG<span class="accent">F</span>ATHER</h1>
+    <div class="hero__grid">
+      <div>
+        <h2 class="hero__title">Build the platform<span class="accent">that will judge you.</span></h2>
+        <p class="kicker">Self-hosted · offline first · MIT licensed</p>
+        <div class="btn-row mt-2">
+          <a class="btn btn--primary" href="/projects">Browse the gallery &gt;&gt;&gt;</a>
+          <a class="btn" href="/events">All events</a>
+        </div>
+      </div>
+      <div>
+        <p class="label-term mb-1">[ BRIEF / 00 ]</p>
+        <p class="prose">
+          Doggfather runs a hackathon end to end on one laptop: registration, teams by invite link,
+          draft-and-edit submissions with a deadline that actually holds, a public gallery,
+          weighted rubrics, judge assignment, cross-judge normalization with the maths written down,
+          community voting that resists stuffing, and exports at every step.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    {{ ui.shead("01", "Events") }}
+    {% if events %}
+    <div class="grid grid--3">
+      {% for e in events %}
+      <article class="card">
+        <div class="card__head">
+          <h3 class="card__title"><a href="/events/{{ e.slug }}">{{ e.name }}</a></h3>
+          {{ ui.phase_status(e) }}
+        </div>
+        <p class="muted small mb-1">{{ e.tagline or "Hackathon" }}</p>
+        <dl class="kv">
+          <dt>Closes</dt><dd>{{ ui.time(e.submissions_close_at) }}</dd>
+          <dt>Projects</dt><dd>{{ e.project_count }}</dd>
+        </dl>
+        <div class="card__foot"><a href="/events/{{ e.slug }}">Open event &gt;&gt;&gt;</a></div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% call ui.empty("No events yet", "An organizer can create the first one.") %}{% endcall %}
+    {% endif %}
+  </div>
+</section>
+
+<section class="section section--panel">
+  <div class="wrap">
+    {{ ui.shead("02", "The pipeline") }}
+    <div class="page-head">
+      <h2 class="display display--lg">Ten stages, one box</h2>
+      <p class="lead">Every hackathon is the same data pipeline. Normalization is where most platforms quietly fail, so ours is documented and shown.</p>
+    </div>
+    <div class="tiles">
+      {% for n, stage, note in [
+        ("01", "Registration", "Accounts and sessions"),
+        ("02", "Teams", "Invite links"),
+        ("03", "Submissions", "Draft, edit, lock"),
+        ("04", "Eligibility", "Tracks and duplicate flags"),
+        ("05", "Assignment", "Track-aware, balanced"),
+        ("06", "Scoring", "Weighted rubrics"),
+        ("07", "Normalization", "Judge bias removed"),
+        ("08", "Results", "Sealed until published"),
+        ("09", "Certificates", "Signed and verifiable"),
+        ("10", "Archive", "Bundles in and out"),
+      ] %}
+      {{ ui.tile(n, stage, note, "text" if n != "07" else "") }}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    {{ ui.shead("03", "Live numbers") }}
+    <div class="tiles">
+      {{ ui.tile(stats.projects, "Unit / N-01", "projects in public galleries") }}
+      {{ ui.tile(stats.teams, "Unit / N-02", "teams formed", "teal") }}
+      {{ ui.tile(stats.judges, "Unit / N-03", "judges seated") }}
+      {{ ui.tile(stats.scores, "Unit / N-04", "scorecards filed", "teal") }}
+    </div>
+  </div>
+</section>
+{% endblock %}

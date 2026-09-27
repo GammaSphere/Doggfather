@@ -1,0 +1,74 @@
+{% import "_macros.html" as ui with context %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Build the platform that will judge you{% endblock %} · Doggfather</title>
+  <meta name="description" content="{% block description %}Doggfather is a self-hostable hackathon submission and judging platform.{% endblock %}">
+  <meta name="theme-color" content="#0B1020">
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
+  <script src="/static/js/app.js?v={{ version }}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker__track">
+      {% for _ in range(2) %}{% for item in ticker_items %}<span class="ticker__item">{{ item }}</span>{% endfor %}{% endfor %}
+    </div>
+  </div>
+
+  <header class="nav">
+    <div class="wrap nav__inner">
+      <a class="brand" href="/" aria-label="Doggfather home">
+        {{ ui.logo() }}
+        <span class="brand__sep" aria-hidden="true"></span>
+        <span>DOGGFATHER<span class="brand__reg">®</span></span>
+      </a>
+      <button class="nav__burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links" data-nav-toggle>
+        <svg width="17" height="11" viewBox="0 0 17 11" aria-hidden="true"><path d="M0 .5h17M0 5.5h17M0 10.5h17" stroke="currentColor"/></svg>
+      </button>
+      <div class="nav__scrim" data-nav-scrim></div>
+      <nav class="nav__links" id="nav-links" aria-label="Main">
+        <button class="nav__close" type="button" data-nav-toggle>[ CLOSE × ]</button>
+        <a href="/events" {% if path.startswith('/events') %}aria-current="page"{% endif %}>Events</a>
+        <a href="/projects" {% if path.startswith('/projects') %}aria-current="page"{% endif %}>Gallery</a>
+        {% if nav.judge %}<a href="/judge" {% if path.startswith('/judge') %}aria-current="page"{% endif %}>Judge</a>{% endif %}
+        {% if nav.organizer %}<a href="/organize" {% if path.startswith('/organize') %}aria-current="page"{% endif %}>Organize</a>{% endif %}
+        {% if nav.admin %}<a href="/admin" {% if path.startswith('/admin') %}aria-current="page"{% endif %}>Admin</a>{% endif %}
+        <a href="/api/docs" class="nav__accent">API</a>
+        {% if user %}
+          <a href="/me" {% if path == '/me' %}aria-current="page"{% endif %}>{{ user.name.split(' ')[0] }}</a>
+          <form method="post" action="/logout" class="inline-form">{{ ui.csrf() }}<button class="btn btn--sm" type="submit">Log out</button></form>
+        {% else %}
+          <a href="/login" class="btn btn--primary">Log in &gt;&gt;&gt;</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    {% if flashes %}
+    <div class="wrap"><div class="flashes" role="status">
+      {% for f in flashes %}<div class="flash flash--{{ f.kind }}">{{ f.message }}</div>{% endfor %}
+    </div></div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <span>Powered by <a href="/">Doggfather</a> v{{ version }} · MIT licensed · runs offline</span>
+      <span class="footer__links">
+        <a href="/projects">Gallery</a>
+        <a href="/api/docs">API</a>
+        <a href="/verify">Verify a record</a>
+        <a href="/healthz">Status</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>
