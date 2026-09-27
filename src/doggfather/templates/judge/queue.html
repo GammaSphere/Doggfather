@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Queue · {{ event.name }}{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/judge">Judge</a><span>{{ event.name }}</span></nav>
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ QUEUE / {{ user.name|upper }} ]</p>
+        <h1 class="display display--lg">{{ remaining }} <span class="accent">to go</span></h1>
+      </div>
+      <div class="stack">
+        {{ ui.progress(done, items|length) }}
+        <p class="small muted mb-0">{{ done }} of {{ items|length }} filed · about {{ minutes_left }} min left at a steady pace ·
+          {% if event.judging_open() %}closes in <span class="pink" data-countdown="{{ event.judging_close_at }}">{{ event.judging_close_at|ago }}</span>{% else %}judging is not open{% endif %}</p>
+        {% if tracks %}<p class="small muted mb-0">Your tracks: {{ tracks|join(", ") }}</p>{% endif %}
+      </div>
+    </div>
+    {% if next_id and event.judging_open() %}
+      <a class="btn btn--primary btn--lg mb-3" href="/judge/{{ event.slug }}/projects/{{ next_id }}">Score next project &gt;&gt;&gt;</a>
+    {% endif %}
+    {% if items %}
+    <ol class="queue">
+      {% for q in items %}
+      <li class="{% if q.id == next_id %}is-current{% endif %}">
+        <span class="queue__idx">{{ "%02d"|format(loop.index) }}</span>
+        <span class="queue__title"><a href="/judge/{{ event.slug }}/projects/{{ q.id }}">{{ q.title }}</a><small>{{ q.track_name or "—" }} · batch {{ q.batch }}</small></span>
+        {% if q.status == "done" %}{{ ui.status("Filed", "ok") }}{% else %}{{ ui.status("Pending", "warn") }}{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+      {% call ui.empty("Nothing assigned yet", "Assignments appear here as soon as the organizers run a batch.") %}{% endcall %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

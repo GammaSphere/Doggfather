@@ -21,7 +21,8 @@ from .middleware import RequestContextMiddleware
 from .ratelimit import RateLimiter
 from .web import auth as auth_pages
 from .web import events as event_pages
-from .web import gallery, organizer, organizer_judging, projects, public, system, teams
+from .api import judging as judging_api
+from .web import gallery, judge, organizer, organizer_judging, projects, public, system, teams
 from .web.templating import build_environment, render
 
 PACKAGE_DIR = Path(__file__).parent
@@ -126,6 +127,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
     app.include_router(system.router)
+    app.include_router(judging_api.router)
     app.include_router(public.router)
     app.include_router(auth_pages.router)
     app.include_router(event_pages.router)
@@ -133,6 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(organizer_judging.router)
     app.include_router(organizer_judging.invites)
     app.include_router(teams.router)
+    app.include_router(judge.router)
     app.include_router(gallery.router)
     app.include_router(projects.router)
     return app

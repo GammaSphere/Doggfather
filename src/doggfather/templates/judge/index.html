@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Judging{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ CONSOLE / JUDGE ]</p>
+        <h1 class="display display--lg">Your <span class="accent">queues</span></h1>
+      </div>
+      <p class="lead">Only your own scores and the projects in your tracks, enforced by the server.</p>
+    </div>
+    {% if events %}
+    <div class="grid grid--3">
+      {% for e in events %}
+      <a class="card" href="/judge/{{ e.slug }}">
+        <div class="card__head"><h2 class="card__title">{{ e.name }}</h2><span class="kicker">{{ e.done }}/{{ e.assigned }}</span></div>
+        {{ ui.progress(e.done, e.assigned) }}
+        <p class="small muted mt-1 mb-0">Judging closes {{ e.judging_close_at|dt }}</p>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+      {% call ui.empty("No judging seats", "When an organizer invites you, the event appears here.") %}{% endcall %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

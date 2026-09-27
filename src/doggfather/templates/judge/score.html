@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Score {{ p.title }}{% endblock %}
+{% block head %}<script src="/static/js/score.js?v={{ version }}" defer></script>{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs"><a href="/judge">Judge</a><a href="/judge/{{ event.slug }}">{{ event.name }}</a><span>{{ position }} / {{ count }}</span></nav>
+    <div class="between mb-2">
+      <div class="cluster">
+        {{ ui.status("Judging open" if open else "Judging closed", "open" if open else "muted") }}
+        {% if existing %}{{ ui.status("Filed " ~ (existing.updated_at|ago), "ok") }}{% endif %}
+      </div>
+      <div style="min-width: 240px">{{ ui.progress(done, count, "teal") }}<p class="small muted mt-1 mb-0 right">{{ done }} of {{ count }} filed</p></div>
+    </div>
+
+    <div class="grid grid--split">
+      <article class="stack-lg">
+        <div>
+          <p class="label-term mb-1">[ PROJECT / {{ p.id|upper }} ]</p>
+          <h1 class="display display--md">{{ p.title }}</h1>
+          {% if p.tagline %}<p class="lead mt-1">{{ p.tagline }}</p>{% endif %}
+          <div class="cluster mt-2">
+            {% if p.track_name %}<span class="tag tag--pink">{{ p.track_name }}</span>{% endif %}
+            <span class="tag tag--teal">{{ p.team_name }}</span>
+            {% for tag in p.tags %}<span class="tag">#{{ tag }}</span>{% endfor %}
+          </div>
+        </div>
+        <div class="btn-row">
+          {% if p.repo_url %}<a class="btn" href="{{ p.repo_url|safe_url }}" rel="noopener nofollow ugc" target="_blank">Source &gt;&gt;&gt;</a>{% endif %}
+          {% if p.demo_url %}<a class="btn btn--teal" href="{{ p.demo_url|safe_url }}" rel="noopener nofollow ugc" target="_blank">Live demo &gt;&gt;&gt;</a>{% endif %}
+          {% if p.video_url %}<a class="btn" href="{{ p.video_url|safe_url }}" rel="noopener nofollow ugc" target="_blank">Video &gt;&gt;&gt;</a>{% endif %}
+        </div>
+        {% if p.thumbnail %}<img src="/uploads/{{ p.thumbnail }}" alt="" style="border:1px solid var(--line)">{% endif %}
+        <div class="prose">{{ p.description|paras if p.description else "No description." }}</div>
+        {% if p.images %}<div class="gallery-strip">{% for img in p.images %}<figure><a href="/uploads/{{ img.file }}" target="_blank"><img src="/uploads/{{ img.file }}" alt="{{ img.caption }}" loading="lazy"></a></figure>{% endfor %}</div>{% endif %}
+        {% set answered = p.answers|selectattr("answer")|list %}
+        {% if answered %}<dl class="kv">{% for a in answered %}<dt>{{ a.prompt }}</dt><dd>{{ a.answer }}</dd>{% endfor %}</dl>{% endif %}
+      </article>
+
+      <aside class="sticky-panel">
+        <form method="post" action="/judge/{{ event.slug }}/projects/{{ p.id }}" class="card card--panel" data-scoring>
+          {{ ui.csrf() }}
+          <div class="card__head">
+            <h2 class="card__title">Your scorecard</h2>
+            <span class="kicker">weighted <strong class="pink" data-preview>—</strong></span>
+          </div>
+          <fieldset {% if not open %}disabled{% endif %} style="border:0; padding:0; margin:0">
+          {% for c in criteria %}
+            <div class="criterion" data-weight="{{ weights.get(c.id, 0) }}">
+              <div class="criterion__head">
+                <span class="criterion__name">{{ c.label }}</span>
+                <span class="criterion__weight">{{ (100 * weights.get(c.id, 0) / total_weight)|round|int }}%</span>
+              </div>
+              {% if c.description %}<p class="small muted mb-1">{{ c.description }}</p>{% endif %}
+              <div class="scale" role="radiogroup" aria-label="{{ c.label }}">
+                {% for n in range(c.min_score, c.max_score + 1) %}
+                  <input type="radio" id="c-{{ loop.index }}-{{ c.key }}" name="c_{{ c.id }}" value="{{ n }}" {% if values.get(c.id)|string == n|string %}checked{% endif %}>
+                  <label for="c-{{ loop.index }}-{{ c.key }}">{{ n }}</label>
+                {% endfor %}
+              </div>
+              {% if errors.get(c.key) %}<span class="field__error">{{ errors[c.key] }}</span>{% endif %}
+            </div>
+          {% endfor %}
+          <div class="field mt-2">
+            <label for="f-comment">Comment <span class="dim">(only you and the organizers see it)</span></label>
+            <textarea id="f-comment" name="comment" rows="4" maxlength="4000">{{ comment }}</textarea>
+          </div>
+          <div class="form__actions">
+            <button class="btn btn--primary" type="submit" name="then" value="next">Save &amp; next &gt;&gt;&gt;</button>
+            <button class="btn" type="submit" name="then" value="stay">Save</button>
+          </div>
+          </fieldset>
+          <p class="small muted mt-2 mb-0">Keys: <kbd>1</kbd>–<kbd>{{ criteria[0].max_score if criteria else 5 }}</kbd> score and advance · <kbd>↑</kbd><kbd>↓</kbd> move · <kbd>C</kbd> comment · <kbd>Enter</kbd> save &amp; next</p>
+        </form>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}
