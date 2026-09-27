@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}New event{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap wrap--mid">
+    <nav class="crumbs"><a href="/organize">Organize</a><span>New event</span></nav>
+    <h1 class="display display--lg">New <span class="accent">event</span></h1>
+    <p class="lead mt-2 mb-3">Dates, team size and review coverage now; tracks, prizes, questions and the rubric right after.</p>
+    <form method="post" action="/organize/new" class="card card--panel stack">
+      {{ ui.csrf() }}
+      {% include "organize/_event_fields.html" %}
+      <div class="form__actions"><button class="btn btn--primary btn--lg" type="submit">Create event &gt;&gt;&gt;</button></div>
+    </form>
+  </div>
+</section>
+{% endblock %}

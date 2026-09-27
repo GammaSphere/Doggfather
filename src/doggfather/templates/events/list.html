@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Events{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ INDEX / EVENTS ]</p>
+        <h1 class="display display--lg">Events</h1>
+      </div>
+      <p class="lead">Every hackathon this portal has run, live or archived. Galleries stay public after the results.</p>
+    </div>
+    {% if items %}
+    <div class="grid grid--3">
+      {% for item in items %}{% set e = item.event %}
+      <article class="card">
+        <div class="card__head">
+          <h2 class="card__title"><a href="/events/{{ e.slug }}">{{ e.name }}</a></h2>
+          {{ ui.phase_status(e) }}
+        </div>
+        <p class="small muted">{{ e.tagline or "Hackathon" }}</p>
+        <dl class="kv">
+          <dt>Opens</dt><dd>{{ ui.time(e.submissions_open_at) }}</dd>
+          <dt>Closes</dt><dd>{{ ui.time(e.submissions_close_at) }}</dd>
+          <dt>Projects</dt><dd>{{ item.project_count }}</dd>
+        </dl>
+        <div class="card__foot between">
+          <a href="/events/{{ e.slug }}">Open event &gt;&gt;&gt;</a>
+          <a href="/projects?event={{ e.id }}" class="small">Gallery</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+      {% call ui.empty("No events yet", "Organizers create events from the Organize console.") %}{% endcall %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

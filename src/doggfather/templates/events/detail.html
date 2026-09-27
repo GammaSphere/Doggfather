@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ event.name }}{% endblock %}
+{% block description %}{{ event.tagline or event.name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="wrap">
+    <div class="hero__meta">
+      <span>[ EVENT / {{ event.id|upper }} ]</span>
+      {{ ui.phase_status(event) }}
+      {% if event.next_deadline %}
+        <span>{{ event.next_deadline[0] }} in <span class="pink" data-countdown="{{ event.next_deadline[1] }}">{{ event.next_deadline[1]|ago }}</span></span>
+      {% endif %}
+    </div>
+    <h1 class="display display--xl">{{ event.name }}</h1>
+    <div class="hero__grid">
+      <div>
+        {% if event.tagline %}<p class="lead">{{ event.tagline }}</p>{% endif %}
+        <div class="btn-row mt-3">
+          {% if "organizer" in roles or "admin" in roles %}
+            <a class="btn btn--primary" href="/organize/{{ event.slug }}">Organizer console &gt;&gt;&gt;</a>
+          {% endif %}
+          {% if "judge" in roles %}
+            <a class="btn btn--primary" href="/judge/{{ event.slug }}">Judging queue &gt;&gt;&gt;</a>
+          {% endif %}
+          {% if event.submissions_open() and "judge" not in roles and "organizer" not in roles %}
+            <a class="btn btn--primary" href="/events/{{ event.slug }}/team">{{ "Your team" if "participant" in roles else "Join or form a team" }} &gt;&gt;&gt;</a>
+          {% elif "participant" in roles %}
+            <a class="btn" href="/events/{{ event.slug }}/team">Your team</a>
+          {% endif %}
+          <a class="btn" href="/projects?event={{ event.id }}">Gallery ({{ counts.submitted }})</a>
+          {% if event.results_published %}<a class="btn btn--teal" href="/events/{{ event.slug }}/results">Results</a>{% endif %}
+        </div>
+      </div>
+      <div>
+        <p class="label-term mb-1">[ TIMELINE ]</p>
+        <ol class="timeline">
+          {% for step in event.timeline() %}
+          <li class="is-{{ step.state }}">
+            <span class="timeline__when">{{ step.when|dt if step.when else "not yet" }}</span>
+            <span class="timeline__what">{{ step.label }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if event.description %}
+<section class="section">
+  <div class="wrap">
+    {{ ui.shead("01", "Brief") }}
+    <div class="prose">{{ event.description|paras }}</div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section section--panel">
+  <div class="wrap">
+    {{ ui.shead("02", "Tracks") }}
+    {% if tracks %}
+    <div class="grid grid--4">
+      {% for t in tracks %}
+      <a class="card" href="/projects?event={{ event.id }}&track={{ t.id }}">
+        <span class="kicker">Track {{ loop.index }}</span>
+        <h3 class="card__title mt-1">{{ t.name }}</h3>
+        {% if t.description %}<p class="small muted">{{ t.description }}</p>{% endif %}
+        <p class="small pink mb-0">{{ t.project_count }} project{{ "s" if t.project_count != 1 }}</p>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+      {% call ui.empty("No tracks", "This event judges every project in one pool.") %}{% endcall %}
+    {% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    {{ ui.shead("03", "Prizes") }}
+    {% if prizes %}
+    <div class="panels">
+      {% for z in prizes %}
+      <div class="between">
+        <div>
+          <h3 class="card__title">{{ z.name }}</h3>
+          <p class="small muted mb-0">{{ z.track_name or "Overall" }}{% if z.description %} · {{ z.description }}{% endif %}</p>
+        </div>
+        {% if z.value %}<span class="display display--md pink">{{ z.value }}</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      {% call ui.empty("No prizes listed") %}{% endcall %}
+    {% endif %}
+  </div>
+</section>
+
+{% if preview %}
+<section class="section">
+  <div class="wrap">
+    {{ ui.shead("04", "Latest submissions") }}
+    <div class="grid grid--3">
+      {% for p in preview %}{% include "projects/_card.html" %}{% endfor %}
+    </div>
+    <div class="btn-row mt-3"><a class="btn btn--primary" href="/projects?event={{ event.id }}">Full gallery &gt;&gt;&gt;</a></div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

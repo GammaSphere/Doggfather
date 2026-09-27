@@ -1,0 +1,18 @@
+<article class="card project-card">
+  <div class="project-card__media">
+    {% if p.thumbnail %}
+      <img src="/uploads/{{ p.thumbnail }}" alt="" loading="lazy">
+    {% else %}
+      <span class="project-card__placeholder" aria-hidden="true">{{ p.title|initials }}</span>
+    {% endif %}
+  </div>
+  <div class="project-card__body">
+    <span class="project-card__meta">{{ p.track_name or "No track" }}</span>
+    <h3 class="project-card__title"><a href="/projects/{{ p.id }}">{{ p.title }}</a></h3>
+    {% if p.tagline %}<p class="project-card__tagline">{{ p.tagline }}</p>{% endif %}
+    <div class="project-card__foot">
+      <span class="tag">{{ p.team_name }}</span>
+      {% for tag in (p.tags or [])[:3] %}<span class="tag">#{{ tag }}</span>{% endfor %}
+    </div>
+  </div>
+</article>

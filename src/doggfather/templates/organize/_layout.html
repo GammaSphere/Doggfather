@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{% block page_title %}Organize{% endblock %} · {{ event.name }}{% endblock %}
+{% block content %}
+{% set organizer_tabs = [
+  ("overview", "Overview", "/organize/" ~ event.slug),
+  ("settings", "Settings", "/organize/" ~ event.slug ~ "/settings"),
+] %}
+<section class="page">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/organize">Organize</a><span><a href="/events/{{ event.slug }}">{{ event.name }}</a></span>
+    </nav>
+    <div class="between mb-2">
+      <h1 class="display display--md">{{ event.name }}</h1>
+      <div class="cluster">
+        {{ ui.phase_status(event) }}
+        <a class="btn btn--sm" href="/events/{{ event.slug }}">Public page</a>
+      </div>
+    </div>
+    <nav class="cluster mb-3" aria-label="Organizer sections">
+      {% for key, label, href in organizer_tabs %}
+        <a class="tag {% if tab == key %}is-on{% endif %}" href="{{ href }}" {% if tab == key %}aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    {% block body %}{% endblock %}
+  </div>
+</section>
+{% endblock %}

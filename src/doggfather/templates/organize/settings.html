@@ -1,0 +1,82 @@
+{% extends "organize/_layout.html" %}
+{% block page_title %}Settings{% endblock %}
+{% block body %}
+<form method="post" action="/organize/{{ event.slug }}/settings" class="card card--panel stack">
+  {{ ui.csrf() }}
+  <div class="card__head"><h2 class="card__title">Event</h2><span class="kicker">all times UTC</span></div>
+  {% include "organize/_event_fields.html" %}
+  <div class="form__actions"><button class="btn btn--primary" type="submit">Save settings</button></div>
+</form>
+
+<div class="grid grid--2 mt-3">
+  <section class="card">
+    <div class="card__head"><h2 class="card__title">Tracks</h2><span class="kicker">{{ tracks|length }}</span></div>
+    {% for t in tracks %}
+    <div class="between" style="padding: 8px 0; border-bottom: 1px solid var(--line-soft)">
+      <span><strong>{{ t.name }}</strong> <span class="small muted">· {{ t.project_count }} projects</span></span>
+      <form method="post" action="/organize/{{ event.slug }}/tracks/{{ t.id }}/delete" class="inline-form" data-confirm="Remove {{ t.name }}?">
+        {{ ui.csrf() }}<button class="linkish small" type="submit">remove</button>
+      </form>
+    </div>
+    {% endfor %}
+    <form method="post" action="/organize/{{ event.slug }}/tracks" class="form mt-2">
+      {{ ui.csrf() }}
+      {{ ui.field("track_name", "New track", "", errors=errors, attrs='maxlength="80"') }}
+      {{ ui.field("track_description", "Description", "", errors=errors) }}
+      <div class="form__actions"><button class="btn" type="submit">Add track</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2 class="card__title">Prizes</h2><span class="kicker">{{ prizes|length }}</span></div>
+    {% for z in prizes %}
+    <div class="between" style="padding: 8px 0; border-bottom: 1px solid var(--line-soft)">
+      <span><strong>{{ z.name }}</strong> <span class="small muted">· {{ z.track_name or "overall" }}{% if z.value %} · {{ z.value }}{% endif %}</span></span>
+      <form method="post" action="/organize/{{ event.slug }}/prizes/{{ z.id }}/delete" class="inline-form" data-confirm="Remove {{ z.name }}?">
+        {{ ui.csrf() }}<button class="linkish small" type="submit">remove</button>
+      </form>
+    </div>
+    {% endfor %}
+    <form method="post" action="/organize/{{ event.slug }}/prizes" class="form form--2 mt-2">
+      {{ ui.csrf() }}
+      {{ ui.field("prize_name", "New prize", "", errors=errors) }}
+      {{ ui.field("prize_value", "Value", "", placeholder="$800", errors=errors) }}
+      {{ ui.select("prize_track", "Track", tracks|map(attribute="id")|zip(tracks|map(attribute="name"))|list, "", blank="Overall", errors=errors) }}
+      {{ ui.field("prize_description", "Description", "", errors=errors) }}
+      <div class="form__actions field--full"><button class="btn" type="submit">Add prize</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2 class="card__title">Submission questions</h2><span class="kicker">{{ questions|length }}</span></div>
+    <p class="small muted">Asked on every submission form, after the standard fields.</p>
+    {% for q in questions %}
+    <div class="between" style="padding: 8px 0; border-bottom: 1px solid var(--line-soft)">
+      <span><strong>{{ q.prompt }}</strong> <span class="small muted">· {{ q.kind }}{% if q.required %} · required{% endif %}</span></span>
+      <form method="post" action="/organize/{{ event.slug }}/questions/{{ q.id }}/delete" class="inline-form" data-confirm="Remove this question?">
+        {{ ui.csrf() }}<button class="linkish small" type="submit">remove</button>
+      </form>
+    </div>
+    {% endfor %}
+    <form method="post" action="/organize/{{ event.slug }}/questions" class="form mt-2">
+      {{ ui.csrf() }}
+      {{ ui.field("question_prompt", "Question", "", errors=errors) }}
+      {{ ui.select("question_kind", "Answer type", question_kinds|zip(["Short text", "Long text", "Link", "Pick one"])|list, "text", errors=errors) }}
+      {{ ui.textarea("question_options", "Options (one per line, for 'Pick one')", "", rows=3, errors=errors) }}
+      {{ ui.field("question_help", "Help text", "", errors=errors) }}
+      <label class="check"><input type="checkbox" name="question_required"> Required</label>
+      <div class="form__actions"><button class="btn" type="submit">Add question</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2 class="card__title">Organizers</h2><span class="kicker">{{ organizers|length }}</span></div>
+    <ul class="arrows">{% for o in organizers %}<li>{{ o.name }} <span class="muted">{{ o.email }}</span></li>{% endfor %}</ul>
+    <form method="post" action="/organize/{{ event.slug }}/organizers" class="form mt-2">
+      {{ ui.csrf() }}
+      {{ ui.field("organizer_email", "Add co-organizer by email", "", type="email", errors=errors, help="They can claim the account with 'forgot password' if they are new.") }}
+      <div class="form__actions"><button class="btn" type="submit">Add organizer</button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}

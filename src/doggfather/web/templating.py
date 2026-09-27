@@ -118,6 +118,7 @@ def build_environment(settings: Settings) -> Environment:
         paras=paragraphs,
         initials=initials,
         tojson_compact=lambda v: Markup(json.dumps(v, separators=(",", ":"))),
+        zip=lambda a, b: zip(a, b),
     )
     env.globals.update(
         version=__version__,

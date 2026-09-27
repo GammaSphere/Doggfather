@@ -1,0 +1,12 @@
+{# Shared by "new event" and "settings". Times are entered and shown in UTC. #}
+<div class="form form--2">
+  {{ ui.field("name", "Event name", values.name, required=True, errors=errors, attrs='maxlength="120"') }}
+  {{ ui.field("slug", "Address", values.slug, errors=errors, help="Used in URLs: /events/<address>. Leave blank to derive it from the name.", attrs='pattern="[a-z0-9-]+" maxlength="60"') }}
+  {{ ui.field("tagline", "Tagline", values.tagline, errors=errors, full=True, attrs='maxlength="200"') }}
+  {{ ui.textarea("description", "Brief", values.description, errors=errors, rows=5, help="Plain text. Blank lines start new paragraphs.") }}
+  {{ ui.field("submissions_open_at", "Submissions open (UTC)", values.submissions_open_at|input_dt, type="datetime-local", required=True, errors=errors) }}
+  {{ ui.field("submissions_close_at", "Submission deadline (UTC)", values.submissions_close_at|input_dt, type="datetime-local", required=True, errors=errors, help="Enforced by the server: nothing is created or edited after this.") }}
+  {{ ui.field("judging_close_at", "Judging closes (UTC)", values.judging_close_at|input_dt, type="datetime-local", required=True, errors=errors) }}
+  {{ ui.field("max_team_size", "Max team size", values.max_team_size, type="number", errors=errors, attrs='min="1" max="50"') }}
+  {{ ui.field("review_target", "Reviews per project", values.review_target, type="number", errors=errors, help="How many judges the auto-assigner aims for.", attrs='min="1" max="20"') }}
+</div>

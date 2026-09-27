@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 
 from ..db import fetch_value
 from ..deps import DB
+from ..services.events import list_events
 from .templating import render
 
 router = APIRouter(include_in_schema=False)
@@ -23,4 +24,6 @@ def platform_stats(db) -> dict[str, int]:
 
 @router.get("/")
 def home(request: Request, db: DB):
-    return render(request, "home.html", {"events": [], "stats": platform_stats(db)})
+    events = [{**vars(item["event"]), "phase": item["event"].phase, "project_count": item["project_count"]}
+              for item in list_events(db)[:6]]
+    return render(request, "home.html", {"events": events, "stats": platform_stats(db)})

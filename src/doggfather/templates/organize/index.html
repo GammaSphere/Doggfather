@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Organize{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ CONSOLE / ORGANIZE ]</p>
+        <h1 class="display display--lg">Your <span class="accent">events</span></h1>
+      </div>
+      <div class="btn-row">
+        {% if can_create %}<a class="btn btn--primary btn--lg" href="/organize/new">New event &gt;&gt;&gt;</a>{% endif %}
+      </div>
+    </div>
+    {% if items %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Event</th><th>Phase</th><th>Deadline</th><th class="num">Projects</th><th></th></tr></thead>
+        <tbody>
+          {% for item in items %}{% set e = item.event %}
+          <tr>
+            <td><a href="/organize/{{ e.slug }}"><strong>{{ e.name }}</strong></a><br><span class="small muted">{{ e.tagline }}</span></td>
+            <td>{{ ui.phase_status(e) }}</td>
+            <td>{{ ui.time(e.submissions_close_at) }}</td>
+            <td class="num">{{ item.project_count }}</td>
+            <td class="right"><a href="/organize/{{ e.slug }}">Console &gt;&gt;&gt;</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {% call ui.empty("Nothing to organize yet", "Events you organize appear here.") %}{% endcall %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
