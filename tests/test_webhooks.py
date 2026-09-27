@@ -115,3 +115,34 @@ def test_webhook_console_and_secret_shown_once(as_role, conn):
     assert "whsec_" in response.text
     assert "whsec_" not in org.get(page).text
     assert as_role("judge_a").get(page).status_code == 403
+
+
+def test_real_transport_delivers_and_refuses_redirects():
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    received = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            received.append((self.path, self.rfile.read(int(self.headers["Content-Length"]))))
+            if self.path == "/redirect":
+                self.send_response(302)
+                self.send_header("Location", "http://169.254.169.254/latest/meta-data")
+            else:
+                self.send_response(204)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_port}"
+    try:
+        assert webhooks.http_transport(f"{base}/ok", b"{}", {"Content-Type": "application/json"})[0] == 204
+        status, _ = webhooks.http_transport(f"{base}/redirect", b"{}", {"Content-Type": "application/json"})
+        assert status == 302  # not followed: counted as a failed delivery
+        assert [path for path, _ in received] == ["/ok", "/redirect"]
+    finally:
+        server.shutdown()

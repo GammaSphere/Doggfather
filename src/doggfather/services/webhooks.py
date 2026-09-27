@@ -165,10 +165,21 @@ def verify_signature(secret: str, header: str, body: bytes, *, tolerance: int = 
     return hmac.compare_digest(expected, parts.get("v1", ""))
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect could bounce a delivery to an address the SSRF check never
+    saw, so redirects are treated as failures instead of followed."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_opener = urllib.request.build_opener(_NoRedirect)
+
+
 def http_transport(url: str, body: bytes, headers: dict[str, str]) -> tuple[int, str]:
     request = urllib.request.Request(url, data=body, method="POST", headers=headers)
     try:
-        with urllib.request.urlopen(request, timeout=5) as response:  # noqa: S310 (organizer-configured URL)
+        with _opener.open(request, timeout=5) as response:  # organizer-configured URL
             return response.status, ""
     except urllib.error.HTTPError as exc:
         return exc.code, f"HTTP {exc.code}"
