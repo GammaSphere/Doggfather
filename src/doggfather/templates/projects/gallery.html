@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Gallery{% endblock %}
+{% block description %}Browse every submitted hackathon project. Search and filter by track, tag and event.{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <p class="label-term mb-1">[ GALLERY / PUBLIC ]</p>
+        <h1 class="display display--lg">The <span class="accent">gallery</span></h1>
+      </div>
+      <p class="lead">{{ total }} project{{ "s" if total != 1 }}{% if query.q %} matching “{{ query.q }}”{% endif %}. Every submission, open to everyone. No login needed.</p>
+    </div>
+
+    <form method="get" action="/projects" class="gallery-layout" role="search">
+      <aside class="filters">
+        <div class="searchbar">
+          <input class="input" type="search" name="q" value="{{ query.q }}" placeholder="Search projects, teams, tags" aria-label="Search">
+          <button class="btn btn--primary" type="submit">Go</button>
+        </div>
+        <div class="field">
+          <label for="f-sort">Sort</label>
+          <select id="f-sort" class="select" name="sort" data-autosubmit>
+            {% for key, label in sorts.items() %}<option value="{{ key }}" {% if key == query.sort %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        {% if facets.events|length > 1 %}
+        <details {% if query.event_ids %}open{% endif %}>
+          <summary>Events</summary>
+          <div class="filters__body">
+            {% for e in facets.events %}
+            <label class="check"><input type="checkbox" name="event" value="{{ e.id }}" {% if e.id in query.event_ids %}checked{% endif %} data-autosubmit> {{ e.name }} <span class="dim">{{ e.n }}</span></label>
+            {% endfor %}
+          </div>
+        </details>
+        {% else %}
+          {% for e in query.event_ids %}<input type="hidden" name="event" value="{{ e }}">{% endfor %}
+        {% endif %}
+        <details open>
+          <summary>Tracks</summary>
+          <div class="filters__body">
+            {% for t in facets.tracks %}
+            <label class="check"><input type="checkbox" name="track" value="{{ t.id }}" {% if t.id in query.track_ids %}checked{% endif %} data-autosubmit> {{ t.name }} <span class="dim">{{ t.n }}</span></label>
+            {% else %}<span class="small muted">No tracks.</span>{% endfor %}
+          </div>
+        </details>
+        <details {% if query.tags or facets.tags %}open{% endif %}>
+          <summary>Tags (all of)</summary>
+          <div class="filters__body">
+            {% for t in facets.tags %}
+            <label class="check"><input type="checkbox" name="tag" value="{{ t.tag }}" {% if t.tag in query.tags %}checked{% endif %} data-autosubmit> #{{ t.tag }} <span class="dim">{{ t.n }}</span></label>
+            {% else %}<span class="small muted">No tags yet.</span>{% endfor %}
+          </div>
+        </details>
+        <noscript><button class="btn btn--block" type="submit">Apply filters</button></noscript>
+      </aside>
+
+      <div>
+        {% if query.q or query.track_ids or query.tags or query.event_ids %}
+        <div class="cluster mb-2">
+          <span class="kicker">Filters:</span>
+          {% if query.q %}<a class="tag is-on" href="{{ url_with(q='') }}">“{{ query.q }}” ×</a>{% endif %}
+          {% for t in facets.tracks if t.id in query.track_ids %}<a class="tag is-on" href="{{ url_with(track=query.track_ids|reject('equalto', t.id)|list) }}">{{ t.name }} ×</a>{% endfor %}
+          {% for tg in query.tags %}<a class="tag is-on" href="{{ url_with(tag=query.tags|reject('equalto', tg)|list) }}">#{{ tg }} ×</a>{% endfor %}
+          {% for e in facets.events if e.id in query.event_ids %}<a class="tag is-on" href="{{ url_with(event=query.event_ids|reject('equalto', e.id)|list) }}">{{ e.name }} ×</a>{% endfor %}
+          <a class="small" href="/projects">clear all</a>
+        </div>
+        {% endif %}
+        {% if items %}
+        <div class="grid grid--3">
+          {% for p in items %}{% include "projects/_card.html" %}{% endfor %}
+        </div>
+        {% if pages > 1 %}
+        <nav class="pagination" aria-label="Pagination">
+          {% for n in range(1, pages + 1) %}
+            {% if n == query.page %}<span class="is-current" aria-current="page">{{ n }}</span>{% else %}<a href="{{ url_with(page=n, per=query.per_page) }}">{{ n }}</a>{% endif %}
+          {% endfor %}
+        </nav>
+        {% endif %}
+        {% else %}
+          {% call ui.empty("Nothing matches", "Try fewer words or clear a filter.") %}<a class="btn" href="/projects">Clear filters</a>{% endcall %}
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
