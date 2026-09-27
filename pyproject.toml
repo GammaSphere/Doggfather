@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doggfather"
+version = "1.0.0"
+description = "Self-hostable hackathon submission and judging platform. Build the platform that will judge you."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "GammaSphere" }]
+dependencies = [
+  "fastapi==0.141.1",
+  "uvicorn==0.54.0",
+  "jinja2==3.1.6",
+  "python-multipart==0.0.32",
+  "cryptography==50.0.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "httpx==0.28.1"]
+
+[project.scripts]
+doggfather = "doggfather.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+doggfather = ["migrations/*.sql", "templates/**/*.html", "static/**/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = ["error::DeprecationWarning:doggfather.*"]

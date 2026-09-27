@@ -1,0 +1,6 @@
+# Runtime dependencies, pinned. Keep in sync with pyproject.toml.
+fastapi==0.141.1
+uvicorn==0.54.0
+jinja2==3.1.6
+python-multipart==0.0.32
+cryptography==50.0.1

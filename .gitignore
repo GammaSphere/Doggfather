@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Runtime data (SQLite database, uploads, signing keys, secret)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Local environment
+.env
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
