@@ -131,27 +131,11 @@ password" (the mail lands in the outbox, or in real inboxes with SMTP set).
 - **API first**: [docs/openapi.json](docs/openapi.json) (OpenAPI 3.1); the
   test suite fails if it drifts from the running app.
 
-## Five-minute tour (demo video script)
+## Five-minute demo
 
-1. **Boot.** `docker compose up`; point at the seeded banner. Open
-   http://localhost:8080 and show the fixture event, then **Gallery**
-   (search "harbour", filter two tracks).
-2. **Create.** Log in as the organizer, then **Organize → New event**
-   ("Demo Night", deadline tomorrow, community vote by email). In
-   **Settings**, add two tracks and a prize.
-3. **Submit.** In a private window, **register** a new account, open Demo
-   Night → **Form a team**, copy the invite link, start a submission, fill
-   the fields, upload a thumbnail, **Save & submit**. It appears in the gallery.
-4. **Judge.** As the organizer, go to **Judges** (invite
-   `jonas.vogel@example.org`; accept from the outbox as Jonas), press **Close
-   submissions now**, then **Assignments → Run auto-assignment**. As Jonas,
-   open **Judge**, score with the keyboard (4, 3, 5, Enter).
-5. **Normalize and publish.** Back as the organizer, look at **Progress**
-   (live), then **Results** on the fixture event: four methods, rank
-   movements, the flat scorer flagged. Press **Close judging now**, then
-   **Publish**. Visitors now see the ranking; before that they got 403.
-6. **Prove it.** Go to **Records → Issue certificates**, open one, and
-   **Verify**. Finish with `python3 run.py .dogfood.toml`: 7/7 PASS.
+[Demo.md](Demo.md) is the full recording script (create, submit, judge,
+publish) with setup, clicks, narration and timings. Every step in it is
+executed by `tests/test_demo_walkthrough.py`, so the script cannot go stale.
 
 ## Documentation
 
@@ -162,6 +146,7 @@ password" (the mail lands in the outbox, or in real inboxes with SMTP set).
 | [JUDGING.md](JUDGING.md) | Assignment, scoring maths, normalization and its defense, isolation, pairwise, voting |
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Sybil, stuffing, collusion, cutoff gaming, IDOR, CSRF, XSS, SSRF…; mitigated vs not |
 | [docs/normalization-report.md](docs/normalization-report.md) | Generated from the fixtures: every project, every method, judge calibration, λ sensitivity, simulation |
+| [Demo.md](Demo.md) | The five-minute demo script, click by click |
 | [docs/PLAN.md](docs/PLAN.md) | The build plan and requirement traceability we started from |
 | `/api/docs` in the running portal | REST API reference |
 
@@ -205,7 +190,7 @@ Written down so nobody has to discover them:
 - **Mail is delivered to the local outbox** unless SMTP is configured.
 - **HTTP only out of the box.** Put TLS in front and set
   `DOGFOOD_COOKIE_SECURE=1`.
-- **The demo video** is recorded by the team following the script above.
+- **The demo video** is recorded by the team following [Demo.md](Demo.md).
 - No web fonts are shipped (offline rule). The UI uses Archivo Black and
   JetBrains Mono when installed, and system fonts otherwise.
 

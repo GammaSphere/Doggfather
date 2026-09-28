@@ -353,11 +353,22 @@ def update_event(db: sqlite3.Connection, actor: User, event: Event, values: dict
     return get_event(db, event.id)
 
 
+@dataclass(frozen=True)
+class PhaseAction:
+    button: str   # what the organizer clicks
+    done: str     # the confirmation they read afterwards
+    moves: str    # the boundary it moves, for the audit sentence
+    field: str    # the column that ends up at the new time
+
+
 PHASE_ACTIONS = {
-    "open_submissions": "Submissions opened now",
-    "close_submissions": "Submissions closed now",
-    "close_judging": "Judging closed now",
-    "extend_judging": "Judging extended by 7 days",
+    "open_submissions": PhaseAction("Open submissions now", "Submissions are open.", "the submission opening",
+                                    "submissions_open_at"),
+    "close_submissions": PhaseAction("Close submissions now", "Submissions are closed.", "the submission deadline",
+                                     "submissions_close_at"),
+    "close_judging": PhaseAction("Close judging now", "Judging is closed.", "the judging deadline", "judging_close_at"),
+    "extend_judging": PhaseAction("Extend judging by 7 days", "Judging extended by 7 days.", "the judging deadline",
+                                  "judging_close_at"),
 }
 
 
@@ -395,8 +406,9 @@ def apply_phase_action(db: sqlite3.Connection, actor: User, event: Event, action
     with transaction(db):
         assignments = ", ".join(f"{k} = ?" for k in updates)
         db.execute(f"UPDATE events SET {assignments}, updated_at = ? WHERE id = ?", (*updates.values(), t, event.id))
+        spec = PHASE_ACTIONS[action]
         audit.record(db, "event.phase", actor=actor, event_id=event.id, target_type="event", target_id=event.id,
-                     detail={"what": PHASE_ACTIONS[action].lower(), "when": t, **updates})
+                     detail={"what": spec.moves, "when": updates[spec.field], **updates})
     return get_event(db, event.id)
 
 

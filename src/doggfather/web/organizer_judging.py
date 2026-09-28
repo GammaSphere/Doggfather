@@ -68,9 +68,9 @@ def rubric_submit(request: Request, db: DB, user: RequiredUser, slug: str, form:
 
 # ------------------------------------------------------------------ judges
 
-def _judges_page(request: Request, db, event, *, errors=None, status_code=200):
+def _judges_page(request: Request, db, event, *, errors=None, status_code=200, sent=None):
     return render(request, "organize/judges.html", {
-        "event": event, "tab": "judges", "errors": errors or {},
+        "event": event, "tab": "judges", "errors": errors or {}, "sent": sent,
         "roster": judges.roster(db, event.id),
         "invites": judges.pending_invites(db, event.id),
         "tracks": event_service.list_tracks(db, event.id),
@@ -85,14 +85,17 @@ def judges_page(request: Request, db: DB, user: RequiredUser, slug: str):
 @router.post("/{slug}/judges/invite")
 def invite(request: Request, db: DB, settings: AppSettings, user: RequiredUser, slug: str, form: Form):
     event = organizer_event(db, user, slug)
+    email = str(form.get("email") or "").strip()
     try:
-        judges.invite_judge(db, settings, user, event, str(form.get("email") or ""),
-                            [str(t) for t in form.getlist("tracks")], str(form.get("note") or ""))
+        token = judges.invite_judge(db, settings, user, event, email,
+                                    [str(t) for t in form.getlist("tracks")], str(form.get("note") or ""))
     except ValidationFailed as exc:
         return _judges_page(request, db, event, errors=exc.fields, status_code=422)
     except AppError as exc:
         return redirect(request, f"/organize/{slug}/judges", exc.message, "error")
-    return redirect(request, f"/organize/{slug}/judges", "Invitation sent (see the outbox).")
+    # Rendered, not redirected: the link is shown once so the organizer can
+    # also share it directly (chat, Discord); only its hash is stored.
+    return _judges_page(request, db, event, sent={"email": email, "link": f"{settings.base_url}/invite/{token}"})
 
 
 @router.post("/{slug}/judges/{judge_id}/tracks")

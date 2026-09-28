@@ -1,6 +1,13 @@
 {% extends "organize/_layout.html" %}
 {% block page_title %}Judges{% endblock %}
 {% block body %}
+{% if sent %}
+<div class="card card--teal mb-3">
+  <div class="card__head"><h2 class="card__title">Invitation sent to {{ sent.email }}</h2>{{ ui.status("Link shown once", "warn") }}</div>
+  <p class="small muted">It is in the outbox (and their inbox, with SMTP configured). You can also share the link directly:</p>
+  <div class="copy-row"><input id="invite-link" value="{{ sent.link }}" readonly aria-label="Invite link"><button class="btn btn--teal" type="button" data-copy="#invite-link">Copy</button></div>
+</div>
+{% endif %}
 <div class="grid grid--split">
   <div>
     {{ ui.shead("01", "Roster") }}

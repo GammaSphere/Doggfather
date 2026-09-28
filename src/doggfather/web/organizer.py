@@ -121,7 +121,8 @@ def phase(request: Request, db: DB, user: RequiredUser, slug: str, form: Form):
         event_service.apply_phase_action(db, user, event, action)
     except AppError as exc:
         return redirect(request, f"/organize/{slug}", exc.message, "error")
-    return redirect(request, f"/organize/{slug}", event_service.PHASE_ACTIONS.get(action, "Updated") + ".")
+    spec = event_service.PHASE_ACTIONS.get(action)
+    return redirect(request, f"/organize/{slug}", spec.done if spec else "Updated.")
 
 
 # --------------------------------------------------------------- settings

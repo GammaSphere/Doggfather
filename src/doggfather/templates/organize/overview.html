@@ -24,11 +24,11 @@
     <div class="card__head"><h2 class="card__title">Phase controls</h2><span class="kicker">audited</span></div>
     <p class="small muted">Each button moves one boundary to <em>now</em>. For exact times, use Settings.</p>
     <div class="stack">
-      {% for action, label in phase_actions.items() %}
-      <form method="post" action="/organize/{{ event.slug }}/phase" data-confirm="{{ label }}?">
+      {% for action, spec in phase_actions.items() %}
+      <form method="post" action="/organize/{{ event.slug }}/phase" data-confirm="{{ spec.button }}?">
         {{ ui.csrf() }}
         <input type="hidden" name="action" value="{{ action }}">
-        <button class="btn btn--block {% if action == 'close_submissions' %}btn--danger{% endif %}" type="submit">{{ label }}</button>
+        <button class="btn btn--block {% if action == 'close_submissions' %}btn--danger{% endif %}" type="submit">{{ spec.button }}</button>
       </form>
       {% endfor %}
     </div>
