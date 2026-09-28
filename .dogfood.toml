@@ -5,7 +5,9 @@
 base_url = "http://localhost:8080"
 
 [tiers]
-claimed = ["T1", "T2"]
+# T1 and T2 are verified by this checker. It has no T3/T4 checks, so T3 and T4
+# are verified by our own suite instead (README lists the test for each).
+claimed = ["T1", "T2", "T3", "T4"]
 pitch = "Doggfather: an offline, self-hosted hackathon portal with backend-enforced judge isolation and a documented, simulation-tested judge-bias normalization."
 
 [auth]
